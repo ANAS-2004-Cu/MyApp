@@ -3,7 +3,7 @@ import { useState, useRef } from 'react';
 import { Link } from "expo-router";
 
 
-export default function game() {
+export default function GAme1() {
 const [value, Setvalue] = useState(-1);
 const rest = useRef<TextInput>(null);
 const [tries, Settries] = useState(0);

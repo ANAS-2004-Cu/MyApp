@@ -15,7 +15,7 @@ return (
         keyExtractor={(item, index) => index.toString()}
         scrollEnabled= {true}
       />
-      <Link href={"/game"} style={styles.text1}>
+      <Link href={"/Game1"} style={styles.text1}>
       Start Guess Game
       </Link>
       <Text>oiwadjwadjwadjo\ijdw</Text>

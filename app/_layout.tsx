@@ -7,7 +7,7 @@ export default function RootLayout() {
       <Stack.Screen name="index" 
       options={{headerShown: true, headerTitle: "Home", headerStyle: {backgroundColor: "gray"}}}
       />
-      <Stack.Screen name="game"
+      <Stack.Screen name="Game1"
       options={{headerShown: true, headerTitle: "Guess Game", headerStyle: {backgroundColor: "gray"}}}
       />
     </Stack>
