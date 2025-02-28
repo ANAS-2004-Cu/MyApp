@@ -6,11 +6,11 @@ export default function RootLayout() {
     <Stack>
       <Stack.Screen 
         name="index" 
-        options={{ headerShown: true, headerTitle: "Home", headerStyle: styles.header , headerTitleAlign: "center" }} 
+        options={{ headerShown: false , statusBarHidden: true}} 
       />
       <Stack.Screen 
         name="Game1"
-        options={{ headerShown: true, headerTitle: "Guess Game", headerStyle: styles.header, headerTitleAlign: "center" }}
+        options={{ headerShown: true, headerTitle: "Guess Game", headerStyle: styles.header, headerTitleAlign: "center" , statusBarHidden: true , headerShadowVisible: false}}
       />
     </Stack>
   );

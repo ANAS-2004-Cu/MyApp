@@ -159,9 +159,7 @@ export default function Game1() {
         <View style={styles.divstyle}></View>
         <View style={styles.box4}>
           <View style={styles.home}>
-          {/* <Link href="/" style={styles.home}> */}
-              <Button title="HOME" onPress={() => router.push('/')}/>
-          {/* </Link> */}
+            <Button title="HOME" onPress={() => router.push("/")}/>
           </View>
           <View style={styles.reset}>
             <Button title="RESET" onPress={reset} />
@@ -252,7 +250,6 @@ const styles = StyleSheet.create({
   reset: {
     height: "100%",
     width: "17%",
-    // alignSelf: "center",
     marginLeft: 40,
   },
   home:{
