@@ -4,6 +4,56 @@ import { Link } from "expo-router";
 
 export default function Index() {
   const data = ["game1", "game2", "game3", "game4", "game5"];
+  const DATA = [
+    {
+      id:"1",
+      title:"Data Structures"
+    },
+    {
+      id:"2",
+      title:"STL"
+    },
+    {
+      id:"3",
+      title:"C++"
+    },
+    {
+      id:"4",
+      title:"Java"
+    },
+    {
+      id:"5",
+      title:"Python"
+    },
+    {
+      id:"6",
+      title:"CP"
+    },
+    {
+      id:"7",
+      title:"ReactJs"
+    },
+    {
+      id:"8",
+      title:"NodeJs"
+    },
+    {
+      id:"9",
+      title:"MongoDb"
+    },
+    {
+      id:"10",
+      title:"ExpressJs"
+    },
+    {
+      id:"11",
+      title:"PHP"
+    },
+    {
+      id:"12",
+      title:"MySql"
+    },
+  ];
 
   return (
     <ImageBackground source={{ uri: "https://i.top4top.io/p_3338uctba1.jpg" }} style={styles.background} blurRadius={1}>
@@ -13,8 +63,7 @@ export default function Index() {
           data={data}
           renderItem={({ item }) => <Text style={styles.flat}>{item}</Text>}
           keyExtractor={(item, index) => index.toString()}
-          scrollEnabled={true}
-        />
+          scrollEnabled={true}/>
         <Link href={"/Game1"} style={styles.text1}>
           Start Guess Game
         </Link>
@@ -26,9 +75,7 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
+    flex: 2,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -46,10 +93,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: "gold",
     fontWeight: "bold",
-    textAlign: "center",
     fontFamily: "monospace",
     borderRadius: 5,
-    marginTop: 20,
   },
   flat: {
     color: "gold",
