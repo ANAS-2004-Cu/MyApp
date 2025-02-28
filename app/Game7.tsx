@@ -3,7 +3,7 @@ import { Link } from "expo-router";
 
 export default function Game7() {
   return (
-    <ImageBackground source={{ uri: "https://i.top4top.io/p_3338uctba1.jpg" }} style={styles.background} blurRadius={1}>
+    <ImageBackground source={{ uri: "https://i.top4top.io/p_3346ue7011.jpg" }} style={styles.background}>
       <View style={styles.container}>
         <Text style={styles.text}>Game 7</Text>
         <Link href="/" style={styles.link}>Go Back Home</Link>

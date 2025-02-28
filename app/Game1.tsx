@@ -112,7 +112,7 @@ export default function Game1() {
   }
 
   return (
-    <ImageBackground source={{ uri: "https://i.top4top.io/p_3338uctba1.jpg" }} style={styles.background} blurRadius={1}>
+    <ImageBackground source={{ uri: "https://i.top4top.io/p_3346ue7011.jpg" }} style={styles.background}>
       <View style={styles.container}>
         <View style={styles.divstyle}></View>
         <View style={styles.box1}>
