@@ -10,7 +10,14 @@ export default function RootLayout() {
       />
       <Stack.Screen 
         name="Game1"
-        options={{ headerShown: true, headerTitle: "Guess Game", headerStyle: styles.header, headerTitleAlign: "center", statusBarHidden: true, headerShadowVisible: false }}
+        options={{ 
+          headerShown: true, 
+          headerTitle: "Guess Game", 
+          headerStyle: styles.header, 
+          headerTitleAlign: "center", 
+          statusBarHidden: true, 
+          headerShadowVisible: false 
+        }}
       />
     </Stack>
   );
