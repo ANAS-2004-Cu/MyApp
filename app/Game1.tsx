@@ -1,8 +1,9 @@
 import { Text, View, StyleSheet, Button, TextInput, ImageBackground } from "react-native";
 import { useState, useRef } from 'react';
-import { Link } from "expo-router";
+import { Href, Link,useRouter} from "expo-router";
 
 export default function Game1() {
+  const router = useRouter();
   const [value, setValue] = useState(-1);
   const rest = useRef<TextInput>(null);
   const [tries, setTries] = useState(0);
@@ -157,7 +158,12 @@ export default function Game1() {
         </View>
         <View style={styles.divstyle}></View>
         <View style={styles.box4}>
-          <View style={styles.bottom2}>
+          <View style={styles.home}>
+          {/* <Link href="/" style={styles.home}> */}
+              <Button title="HOME" onPress={() => router.push('/')}/>
+          {/* </Link> */}
+          </View>
+          <View style={styles.reset}>
             <Button title="RESET" onPress={reset} />
           </View>
         </View>
@@ -193,9 +199,12 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   box4: {
-    width: "90%",
+    flex: 2,
+    width: "100%",
     height: "4.5%",
     borderRadius: 5,
+    flexDirection: "row",
+    justifyContent: "center",
   },
   divstyle: {
     width: "100%",
@@ -240,10 +249,16 @@ const styles = StyleSheet.create({
     textAlignVertical: "center",
     alignContent: "center",
   },
-  bottom2: {
+  reset: {
     height: "100%",
     width: "17%",
-    alignSelf: "center",
+    // alignSelf: "center",
+    marginLeft: 40,
+  },
+  home:{
+    height: "100%",
+    width: "17%",
+    marginRight: 40,
   },
   bottom1: {
     height: "100%",
