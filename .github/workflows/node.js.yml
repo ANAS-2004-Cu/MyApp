@@ -26,5 +26,4 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: node -v
-    - run: dir
+    - run: npx expo start
