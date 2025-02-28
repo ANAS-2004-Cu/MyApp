@@ -1,73 +1,43 @@
 import { Text, View, StyleSheet, Button, TextInput, ImageBackground, FlatList } from "react-native";
 import { useState, useRef } from 'react';
-import { Link } from "expo-router";
+import { Href, Link } from "expo-router";
 
 export default function Index() {
-  const data = ["game1", "game2", "game3", "game4", "game5"];
-  const DATA = [
-    {
-      id:"1",
-      title:"Data Structures"
-    },
-    {
-      id:"2",
-      title:"STL"
-    },
-    {
-      id:"3",
-      title:"C++"
-    },
-    {
-      id:"4",
-      title:"Java"
-    },
-    {
-      id:"5",
-      title:"Python"
-    },
-    {
-      id:"6",
-      title:"CP"
-    },
-    {
-      id:"7",
-      title:"ReactJs"
-    },
-    {
-      id:"8",
-      title:"NodeJs"
-    },
-    {
-      id:"9",
-      title:"MongoDb"
-    },
-    {
-      id:"10",
-      title:"ExpressJs"
-    },
-    {
-      id:"11",
-      title:"PHP"
-    },
-    {
-      id:"12",
-      title:"MySql"
-    },
+  const data = [
+    {id:"1",title:"Guess Game" ,to:"/Game1" as Href,},
+    {id:"2",title:"Game 2", to:"/Game2" as Href},
+    {id:"3",title:"Game 3", to:"/Game3" as Href},
+    {id:"4",title:"Game 4", to:"/Game4" as Href},
+    {id:"5",title:"Game 5", to:"/Game5" as Href},
+    {id:"6",title:"Game 6", to:"/Game6" as Href},
+    {id:"7",title:"Game 7", to:"/Game7" as Href},
+    {id:"8",title:"Game 8", to:"/Game8" as Href},
+    {id:"9",title:"Game 9", to:"/Game9" as Href},
+    {id:"10",title:"Game 10", to:"/Game10" as Href},
+    {id:"11",title:"Game 11", to:"/Game11" as Href},
   ];
-
+  type ItemProps = {title: string , to: Href};
+  const Item = ({ title , to }: ItemProps) => (
+    <View style={styles.item} >
+      <ImageBackground source={{ uri: "https://l.top4top.io/p_33465ztqm1.png" }} style={styles.sbackground}>
+        <Link href={to} style={styles.text1}>
+          <Text style={styles.text1}>{title}</Text>
+        </Link>
+      </ImageBackground>
+    </View>
+  );
   return (
     <ImageBackground source={{ uri: "https://i.top4top.io/p_3338uctba1.jpg" }} style={styles.background} blurRadius={1}>
       <View style={styles.container}>
-        <Text style={styles.header}>Home</Text>
-        <FlatList 
+        <FlatList
           data={data}
-          renderItem={({ item }) => <Text style={styles.flat}>{item}</Text>}
-          keyExtractor={(item, index) => index.toString()}
-          scrollEnabled={true}/>
-        <Link href={"/Game1"} style={styles.text1}>
+          renderItem={({ item }) => <Item title={item.title}  to={item.to} />}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}/>
+        {/* <Link href={"/Game1"} style={styles.text1}>
           Start Guess Game
-        </Link>
-        <Text style={styles.footer}>oiwadjwadjwadjo\ijdw</Text>
+        </Link> */}
       </View>
     </ImageBackground>
   );
@@ -75,35 +45,38 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 2,
-    justifyContent: "center",
+    flex: 1,
     alignItems: "center",
+    height: "100%",
+    width: "100%",
   },
   background: {
     width: '100%',
     height: '100%',
   },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: "white",
+  sbackground: {
+    width: '100%',
+    height: '100%',
+    justifyContent: "center",
+    alignItems: "center",
   },
   text1: {
+    height: 50,
+    width: 230,
     fontSize: 20,
     color: "gold",
     fontWeight: "bold",
     fontFamily: "monospace",
     borderRadius: 5,
+    textAlign: "center",
+    padding: 12,
   },
-  flat: {
-    color: "gold",
-    fontSize: 18,
-    marginVertical: 5,
-  },
-  footer: {
-    fontSize: 16,
-    color: "white",
-    marginTop: 20,
+  item: {
+    padding: 5,
+    height: 70,
+    width:400,
+    marginVertical: 10,
+    marginHorizontal: 1,
+    borderRadius: 5,
   },
 });
