@@ -27,7 +27,7 @@ export default function Index() {
     </View>
   );
   return (
-    <ImageBackground source={{ uri: "https://i.top4top.io/p_3338uctba1.jpg" }} style={styles.background} blurRadius={1}>
+    <ImageBackground source={{ uri: "https://i.top4top.io/p_3346ue7011.jpg" }} style={styles.background}>
       <View style={styles.container}>
         <FlatList
           data={data}
@@ -35,9 +35,6 @@ export default function Index() {
           keyExtractor={item => item.id}
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}/>
-        {/* <Link href={"/Game1"} style={styles.text1}>
-          Start Guess Game
-        </Link> */}
       </View>
     </ImageBackground>
   );
@@ -64,9 +61,9 @@ const styles = StyleSheet.create({
     height: 50,
     width: 230,
     fontSize: 20,
-    color: "gold",
+    color: "#78F0BC",
     fontWeight: "bold",
-    fontFamily: "monospace",
+    fontFamily: "arial",
     borderRadius: 5,
     textAlign: "center",
     padding: 12,
