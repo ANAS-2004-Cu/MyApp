@@ -116,7 +116,7 @@ export default function Game1() {
       <View style={styles.container}>
         <View style={styles.divstyle}></View>
         <View style={styles.box1}>
-          <ImageBackground source={require("../assets/images/game1-1.jpg")} style={styles.imageBackground} blurRadius={2} borderRadius={30}>
+          <ImageBackground source={require("../assets/images/game1-1.jpg")} style={styles.imageBackground} blurRadius={2}>
             <Text style={styles.text1}>Enter your guess between 0 and 99:</Text>
             <View style={styles.inbutbox}>
               <TextInput
@@ -142,7 +142,7 @@ export default function Game1() {
         </View>
         <View style={styles.divstyle}></View>
         <View style={styles.box3}>
-          <ImageBackground source={require("../assets/images/game1-2.jpg")} style={styles.imageBackground} blurRadius={3} borderRadius={30}>
+          <ImageBackground source={require("../assets/images/game1-2.jpg")} style={styles.imageBackground} blurRadius={3}>
             <Text style={styles.text3}>
               {perfect ? `Got It!🎉 Perfect Guess. \nThe Number was ✨${randomNumber}✨.` :
                 limit ? `You Have Reached The Limit Of 10 Tries.🤯\nThe Number was\n☠️${randomNumber}☠️.` :
@@ -278,5 +278,7 @@ const styles = StyleSheet.create({
   imageBackground: {
     width: '100%',
     height: '100%',
+    borderRadius: 30,
+    overflow: "hidden"
   },
 });
