@@ -18,7 +18,7 @@ export default function Index() {
 
   const Item = ({ title, to }: { title: string; to: Href }) => (
     <View style={styles.item}>
-      <ImageBackground source={{ uri: "https://l.top4top.io/p_33465ztqm1.png" }} style={styles.sbackground}>
+      <ImageBackground source={require("../assets/images/home1.png")} style={styles.sbackground}>
         <Link href={to} style={styles.text1}>
           <Text style={styles.text1}>{title}</Text>
         </Link>
@@ -27,7 +27,7 @@ export default function Index() {
   );
 
   return (
-    <ImageBackground source={{ uri: "https://i.top4top.io/p_3346ue7011.jpg" }} style={styles.background}>
+    <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
       <View style={styles.container}>
         <FlatList
           data={data}

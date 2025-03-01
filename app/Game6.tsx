@@ -3,7 +3,7 @@ import { Link } from "expo-router";
 
 export default function Game6() {
   return (
-    <ImageBackground source={{ uri: "https://i.top4top.io/p_3346ue7011.jpg" }} style={styles.background}>
+    <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
       <View style={styles.container}>
         <Text style={styles.text}>Game 6</Text>
         <Link href="/" style={styles.link}>Go Back Home</Link>
