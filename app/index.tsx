@@ -35,6 +35,7 @@ export default function Index() {
           keyExtractor={item => item.id}
           showsVerticalScrollIndicator={false}
           showsHorizontalScrollIndicator={false}
+          style={{width: "100%"}}
         />
       </View>
     </ImageBackground>
@@ -44,7 +45,6 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: "center",
     height: "100%",
     width: "100%",
   },
@@ -76,5 +76,6 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     marginHorizontal: 1,
     borderRadius: 5,
+    alignSelf: "center",
   },
 });

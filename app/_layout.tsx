@@ -6,7 +6,7 @@ export default function RootLayout() {
     <Stack>
       <Stack.Screen 
         name="index" 
-        options={{ headerShown: false, statusBarHidden: true }} 
+        options={{ headerShown: false, statusBarHidden: true}} 
       />
       <Stack.Screen 
         name="Game1"
