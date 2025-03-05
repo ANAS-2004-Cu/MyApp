@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
   box1: {
     width: "96%",
-    height: (Dimensions.get("window").height -50 )* 0.43,
+    height: (Dimensions.get("window").height - 50) * 0.43,
     borderRadius: 5,
     position: "absolute",
     top: 15,
@@ -189,13 +189,13 @@ const styles = StyleSheet.create({
     width: "90%",
     borderRadius: 5,
     position: "absolute",
-    top: (Dimensions.get("window").height -50)* 0.43 + 20,
+    top: (Dimensions.get("window").height - 50) * 0.43 + 20,
   },
   box3: {
     width: "96%",
-    height: (Dimensions.get("window").height -50)* 0.43,
+    height: (Dimensions.get("window").height - 50) * 0.43,
     position: "absolute",
-    top: (Dimensions.get("window").height -50)* 0.43 + 50,
+    top: (Dimensions.get("window").height - 50) * 0.43 + 50,
   },
   box4: {
     flex: 2,
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     position: "absolute",
-    top:2*(Dimensions.get("window").height -50)* 0.43 + 62,
+    top: 2 * (Dimensions.get("window").height - 50) * 0.43 + 62,
   },
   text1: {
     fontSize: 18,
