@@ -1,6 +1,6 @@
-import { Text, View, StyleSheet, Button, TextInput, ImageBackground } from "react-native";
+import { Text, View, StyleSheet, Button, TextInput, ImageBackground, useWindowDimensions, Dimensions } from "react-native";
 import { useState, useRef } from 'react';
-import { Href, Link,useRouter} from "expo-router";
+import { Href, Link, useRouter } from "expo-router";
 
 export default function Game1() {
   const router = useRouter();
@@ -32,6 +32,7 @@ export default function Game1() {
     setHit(true);
     setSoHigher(false);
     setSoLower(false);
+    console.log(randomNumber);
   }
 
   function incrementTries() {
@@ -112,9 +113,8 @@ export default function Game1() {
   }
 
   return (
-    <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
+    <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background} >
       <View style={styles.container}>
-        <View style={styles.divstyle}></View>
         <View style={styles.box1}>
           <ImageBackground source={require("../assets/images/game1-1.jpg")} style={styles.imageBackground} blurRadius={2}>
             <Text style={styles.text1}>Enter your guess between 0 and 99:</Text>
@@ -136,11 +136,9 @@ export default function Game1() {
             </View>
           </ImageBackground>
         </View>
-        <View style={styles.divstyle}></View>
         <View style={styles.box2}>
           <Text style={styles.text2}>Your guesses: {tries} ,Remain {10 - tries}</Text>
         </View>
-        <View style={styles.divstyle}></View>
         <View style={styles.box3}>
           <ImageBackground source={require("../assets/images/game1-2.jpg")} style={styles.imageBackground} blurRadius={3}>
             <Text style={styles.text3}>
@@ -156,16 +154,14 @@ export default function Game1() {
             </Text>
           </ImageBackground>
         </View>
-        <View style={styles.divstyle}></View>
         <View style={styles.box4}>
           <View style={styles.home}>
-            <Button title="HOME" onPress={() => router.push("/")}/>
+            <Button title="HOME" onPress={() => router.push("/")} />
           </View>
           <View style={styles.reset}>
             <Button title="RESET" onPress={reset} />
           </View>
         </View>
-        <View style={styles.divstyle}></View>
       </View>
     </ImageBackground>
   );
@@ -176,36 +172,41 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    width: "100%",
+    height: "100%",
   },
   background: {
     width: '100%',
-    height: '100%',
+    height: Dimensions.get("window").height,
   },
   box1: {
     width: "96%",
-    height: "42%",
+    height: (Dimensions.get("window").height -50 )* 0.43,
     borderRadius: 5,
+    position: "absolute",
+    top: 15,
   },
   box2: {
     width: "90%",
-    height: "3%",
     borderRadius: 5,
+    position: "absolute",
+    top: (Dimensions.get("window").height -50)* 0.43 + 20,
   },
   box3: {
     width: "96%",
-    height: "43%",
+    height: (Dimensions.get("window").height -50)* 0.43,
+    position: "absolute",
+    top: (Dimensions.get("window").height -50)* 0.43 + 50,
   },
   box4: {
     flex: 2,
     width: "100%",
-    height: "4.5%",
+    height: 40,
     borderRadius: 5,
     flexDirection: "row",
     justifyContent: "center",
-  },
-  divstyle: {
-    width: "100%",
-    height: "1%",
+    position: "absolute",
+    top:2*(Dimensions.get("window").height -50)* 0.43 + 62,
   },
   text1: {
     fontSize: 18,
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
     width: "17%",
     marginLeft: 40,
   },
-  home:{
+  home: {
     height: "100%",
     width: "17%",
     marginRight: 40,
