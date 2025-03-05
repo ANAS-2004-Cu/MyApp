@@ -32,7 +32,6 @@ export default function Game1() {
     setHit(true);
     setSoHigher(false);
     setSoLower(false);
-    console.log(randomNumber);
   }
 
   function incrementTries() {
