@@ -6,6 +6,20 @@
     "configurations": [
         {
             "type": "node-terminal",
+            "name": "Upload to Expo",
+            "request": "launch",
+            "command": "eas deploy",
+            "cwd": "${workspaceFolder}"
+        }
+        {
+            "type": "node-terminal",
+            "name": "Export to web",
+            "request": "launch",
+            "command": "npx expo export --platform web",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "node-terminal",
             "name": "EXPO START",
             "request": "launch",
             "command": "npx expo start",
