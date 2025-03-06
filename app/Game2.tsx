@@ -184,16 +184,16 @@ const styles = StyleSheet.create({
     alignContent: "center",
   },
   boards: {
-    width: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 100)),
-    height: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 100)),
+    width: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)),
+    height: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)),
     borderRadius: 30,
     overflow: "hidden",
     borderColor: "darkred",
     borderWidth: 4,
   },
   square: {
-    width: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 100)) / 3,
-    height: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 100)) / 3,
+    width: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)) / 3,
+    height: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)) / 3,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 5,
@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     borderColor: "black",
   },
   squareText: {
-    fontSize: ((Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 100)) / 3) - 45,
+    fontSize: ((Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)) / 3) - 45,
     color: "blue",
     fontWeight: "bold",
 
