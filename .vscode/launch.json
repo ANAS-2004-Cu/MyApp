@@ -10,7 +10,7 @@
             "request": "launch",
             "command": "eas deploy",
             "cwd": "${workspaceFolder}"
-        }
+        },
         {
             "type": "node-terminal",
             "name": "Export to web",
