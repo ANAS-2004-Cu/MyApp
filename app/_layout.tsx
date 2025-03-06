@@ -9,15 +9,16 @@ export default function RootLayout() {
         options={{ headerShown: false, statusBarHidden: true}} 
       />
       <Stack.Screen 
-        name="Game1"
-        options={{ 
-          headerShown: true, 
-          headerTitle: "Guess Game", 
-          headerStyle: styles.header, 
-          headerTitleAlign: "center", 
-          statusBarHidden: true, 
-          headerShadowVisible: false 
-        }}
+        name="Game1" 
+        options={{ headerShown: false, statusBarHidden: true}} 
+      />
+      <Stack.Screen 
+        name="Game2" 
+        options={{ headerShown: false, statusBarHidden: true}} 
+      />
+      <Stack.Screen 
+        name="Game3" 
+        options={{ headerShown: false, statusBarHidden: true}} 
       />
     </Stack>
   );
@@ -25,6 +26,6 @@ export default function RootLayout() {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: "gray",
+    backgroundColor: "#578FCA",
   },
 });
