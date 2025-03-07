@@ -98,11 +98,9 @@ export default function Game2() {
         <Text style={styles.header}>Tic Tac Toe_V1</Text>
         <Text style={{ fontSize: 27, fontWeight: "bold", color: "lightblue", marginBottom: 15 }}>Playing Mode</Text>
         <View style={{ flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 50 }}>
-
           <TouchableOpacity style={typeBoard === 1 ? styles.hold : styles.player} onPress={() => mode(1)}>
             <Text style={styles.playertext}>1 PLAYER</Text>
           </TouchableOpacity>
-
           <TouchableOpacity style={typeBoard === 2 ? styles.hold : styles.player} onPress={() => mode(2)}>
             <Text style={styles.playertext}>2 PLAYER</Text>
           </TouchableOpacity>
@@ -128,7 +126,6 @@ export default function Game2() {
 
 
         </View>
-
         {winner && <Text style={styles.winnerText}>Winner Is: {winner}</Text>}
         <TouchableOpacity style={styles.resetButton} onPress={resetGame}>
           <Text style={styles.resetButtonText}>Reset</Text>
