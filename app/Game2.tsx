@@ -12,6 +12,9 @@ export default function Game2() {
   const [typeBoard, setTypeBoard] = useState(2);
   const [board, setBoard] = useState(Array(9).fill(null));
   const [isXNext1, setIsXNext1] = useState(true);
+  const [count, setCount] = useState(0);
+  const [count1, setCount1] = useState(0);
+  const [count2, setCount2] = useState(0);
 
   const mode = (type: number) => {
     if (typeBoard === type) { return; }
@@ -23,6 +26,9 @@ export default function Game2() {
         setWinner(winner1);
         setIsXNext1(isXNext);
         setIsXNext(true);
+        setCount2(count);
+        setCount(count1);
+
       }
       if (type === 2) {
         setBoard1(board.slice());
@@ -30,16 +36,21 @@ export default function Game2() {
         setWinner1(winner);
         setWinner(winner2);
         setIsXNext(isXNext1);
+        setCount1(count);
+        setCount(count2);
       }
     }
     setTypeBoard(type);
   }
 
   const handlePress = (index: number) => {
+    if (typeBoard === 1 && count === 5 && winner === null) { return alert("👻 Game Over 👻 ,Please Rest Game 🔄"); }
+    if (typeBoard === 2 && count === 9 && winner === null) { return alert("👻 Game Over 👻 ,Please Rest Game 🔄"); }
     if (board[index] || winner) {
       if (winner) { return alert(`Game Over ✨ ${winner} ✨ Is 🎊 WINNER 🎉`); }
       return;
     }
+    if (count < 9) { setCount(count + 1); }
     board[index] = isXNext ? "X" : "O";
     setWinner(calculateWinner(board));
     typeBoard === 1 ? computerMove() : setIsXNext(!isXNext);
@@ -47,15 +58,41 @@ export default function Game2() {
 
   const computerMove = () => {
     const newboard = board.slice();
-
     let availableMoves = newboard.map((val, idx) => val === null ? idx : null).filter(val => val !== null);
     if (availableMoves.length > 0) {
-      let move = availableMoves[Math.floor(Math.random() * availableMoves.length)];
+      let move = findBestMove(newboard);
       newboard[move] = "O";
       setIsXNext(true);
       setWinner(calculateWinner(newboard));
       setBoard(newboard);
     }
+  };
+
+  const findBestMove = (board: (string | null)[]) => {
+    const lines = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
+    ];
+    for (let i = 0; i < lines.length; i++) {
+      const [a, b, c] = lines[i];
+      if (board[a] === "O" && board[b] === "O" && board[c] === null) return c;
+      if (board[a] === "O" && board[b] === null && board[c] === "O") return b;
+      if (board[a] === null && board[b] === "O" && board[c] === "O") return a;
+    }
+    for (let i = 0; i < lines.length; i++) {
+      const [a, b, c] = lines[i];
+      if (board[a] === "X" && board[b] === "X" && board[c] === null) return c;
+      if (board[a] === "X" && board[b] === null && board[c] === "X") return b;
+      if (board[a] === null && board[b] === "X" && board[c] === "X") return a;
+    }
+    let availableMoves = board.map((val, idx) => val === null ? idx : null).filter(val => val !== null);
+    return availableMoves[Math.floor(Math.random() * availableMoves.length)];
   };
 
   const calculateWinner = (board: (string | null)[]) => {
@@ -88,6 +125,7 @@ export default function Game2() {
     setBoard(Array(9).fill(null));
     setWinner(null);
     setIsXNext(typeBoard === 1 ? true : isXNext);
+    setCount(0);
   };
   const router = useRouter();
 
@@ -127,6 +165,7 @@ export default function Game2() {
 
         </View>
         {winner && <Text style={styles.winnerText}>Winner Is: {winner}</Text>}
+        {((typeBoard === 2 && count === 9 && winner === null) || (typeBoard === 1 && count === 5 && winner === null)) && <Text style={styles.winnerText}>⚔⚔⚔ It's a Draw ⚔⚔⚔</Text>}
         <TouchableOpacity style={styles.resetButton} onPress={resetGame}>
           <Text style={styles.resetButtonText}>Reset</Text>
         </TouchableOpacity>
