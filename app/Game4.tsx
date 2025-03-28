@@ -21,7 +21,7 @@ export default function Game4() {
     <ImageBackground source={require("../assets/images/calc.jpg")} style={styles.background}>
       <View style={styles.container}>
         <View style={{ flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 30}}>
-          <View style={{ alignItems: "center" ,width:"30%"}}>
+          <View style={{ alignItems: "center" ,width:"34%"}}>
             <Text style={styles.text}>السعر الرسمي</Text>
             <TextInput
               placeholder="السعر الرسمي"
