@@ -4,21 +4,25 @@ import { StyleSheet } from "react-native";
 export default function RootLayout() {
   return (
     <Stack>
-      <Stack.Screen 
-        name="index" 
-        options={{ headerShown: false, statusBarHidden: true}} 
+      <Stack.Screen
+        name="index"
+        options={{ headerShown: false, statusBarHidden: true }}
       />
-      <Stack.Screen 
-        name="Game1" 
-        options={{ headerShown: false, statusBarHidden: true}} 
+      <Stack.Screen
+        name="Game1"
+        options={{ headerShown: false, statusBarHidden: true }}
       />
-      <Stack.Screen 
-        name="Game2" 
-        options={{ headerShown: false, statusBarHidden: true}} 
+      <Stack.Screen
+        name="Game2"
+        options={{ headerShown: false, statusBarHidden: true }}
       />
-      <Stack.Screen 
-        name="Game3" 
-        options={{ headerShown: false, statusBarHidden: true}} 
+      <Stack.Screen
+        name="Game3"
+        options={{ headerShown: false, statusBarHidden: true }}
+      />
+      <Stack.Screen
+        name="Game4"
+        options={{ headerShown: false, statusBarHidden: true }}
       />
     </Stack>
   );

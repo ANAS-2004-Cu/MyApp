@@ -6,7 +6,7 @@ export default function Index() {
     { id: "1", title: "Guess Game", to: "/Game1" as Href },
     { id: "2", title: "X_O (Normal)", to: "/Game2" as Href },
     { id: "3", title: "X_O (Advanced)", to: "/Game3" as Href },
-    { id: "4", title: "Game 4", to: "/Game4" as Href },
+    { id: "4", title: "MY CALC", to: "/Game4" as Href },
     { id: "5", title: "Game 5", to: "/Game5" as Href },
     { id: "6", title: "Game 6", to: "/Game6" as Href },
     { id: "7", title: "Game 7", to: "/Game7" as Href },
