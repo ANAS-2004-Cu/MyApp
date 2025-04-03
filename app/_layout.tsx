@@ -24,6 +24,10 @@ export default function RootLayout() {
         name="Game4"
         options={{ headerShown: false, statusBarHidden: true }}
       />
+            <Stack.Screen
+        name="Game5"
+        options={{ headerShown: false, statusBarHidden: true }}
+      />
     </Stack>
   );
 }
