@@ -20,8 +20,8 @@ export default function Game4() {
   return (
     <ImageBackground source={require("../assets/images/calc.jpg")} style={styles.background}>
       <View style={styles.container}>
-        <View style={{ flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 30}}>
-          <View style={{ alignItems: "center" ,width:"34%"}}>
+        <View style={{ flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 30 }}>
+          <View style={{ alignItems: "center" }}>
             <Text style={styles.text}>السعر الرسمي</Text>
             <TextInput
               placeholder="السعر الرسمي"
@@ -32,7 +32,7 @@ export default function Game4() {
                 setValue1(Number(num) * count);
               }} />
           </View>
-          <View style={{ alignItems: "center" ,width:"30%"}}>
+          <View style={{ alignItems: "center" }}>
             <Text style={styles.text}>عدد الأجهزة</Text>
             <TextInput
               placeholder="عدد الأجهزة"
@@ -47,7 +47,7 @@ export default function Game4() {
                 }
               }} />
           </View>
-          <View style={{ alignItems: "center" ,width:"30%"}}>
+          <View style={{ alignItems: "center" }}>
             <Text style={styles.text}>سعر البيع</Text>
             <TextInput
               placeholder="سعر البيع"
