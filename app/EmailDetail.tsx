@@ -16,6 +16,8 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import RenderHtml from 'react-native-render-html';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import * as Clipboard from 'expo-clipboard';
+import Toast from 'react-native-toast-message';
 import { getMessage, Email, deleteMessage } from '../utils/tempMailApi';
 
 export default function EmailDetail() {
@@ -23,7 +25,9 @@ export default function EmailDetail() {
     const [loading, setLoading] = useState(true);
     const [email, setEmail] = useState<Email | null>(null);
     const [showHtml, setShowHtml] = useState(true);
+    const [htmlContentValid, setHtmlContentValid] = useState(true);
     const { width } = useWindowDimensions();
+    const [selectedText, setSelectedText] = useState('');
 
     // Fetch email details on component mount
     useEffect(() => {
@@ -42,6 +46,9 @@ export default function EmailDetail() {
             setLoading(true);
             const emailData = await getMessage(id);
             setEmail(emailData);
+
+            // Check if HTML content exists and is a string before calling trim()
+            setHtmlContentValid(typeof emailData.html === 'string' && emailData.html.trim().length > 0);
         } catch (error) {
             console.error('Error fetching email details:', error);
             Alert.alert('Error', 'Failed to load email details. Please try again.');
@@ -115,6 +122,23 @@ export default function EmailDetail() {
         setShowHtml(!showHtml);
     };
 
+    // Copy text to clipboard
+    const copyToClipboard = async (text: string) => {
+        try {
+            await Clipboard.setStringAsync(text);
+            Alert.alert('Success', 'Text copied to clipboard');
+        } catch (error) {
+            console.error('Failed to copy text:', error);
+        }
+    };
+
+    // Add long press handler for plain text
+    const handleLongPress = () => {
+        if (email?.text) {
+            copyToClipboard(email.text);
+        }
+    };
+
     // If loading, show loading indicator
     if (loading) {
         return (
@@ -185,8 +209,8 @@ export default function EmailDetail() {
                         </Text>
                     </View>
 
-                    {/* View toggle button */}
-                    {email.html && (
+                    {/* View toggle button - only show if HTML content is valid */}
+                    {htmlContentValid && (
                         <TouchableOpacity style={styles.toggleButton} onPress={toggleContentView}>
                             <Text style={styles.toggleButtonText}>
                                 View {showHtml ? 'Plain Text' : 'HTML'}
@@ -196,14 +220,27 @@ export default function EmailDetail() {
 
                     {/* Email content */}
                     <View style={styles.emailContent}>
-                        {showHtml && email.html ? (
+                        {showHtml && htmlContentValid ? (
                             <RenderHtml
                                 contentWidth={width - 32}
-                                source={{ html: email.html }}
+                                source={{ html: email.html || '<p>No HTML content available</p>' }}
                                 baseStyle={styles.htmlContent}
                                 tagsStyles={{
                                     body: { color: '#fff', fontFamily: 'System' },
                                     a: { color: '#78F0BC', textDecorationLine: 'underline' },
+                                    p: { color: '#fff', marginBottom: 10 },
+                                    div: { color: '#fff', marginBottom: 10 },
+                                    span: { color: '#fff' },
+                                    h1: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginVertical: 10 },
+                                    h2: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginVertical: 8 },
+                                    h3: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginVertical: 6 },
+                                    ul: { color: '#fff', marginLeft: 20 },
+                                    ol: { color: '#fff', marginLeft: 20 },
+                                    li: { color: '#fff', marginBottom: 5 },
+                                    table: { borderColor: '#78F0BC', borderWidth: 1 },
+                                    th: { backgroundColor: 'rgba(120, 240, 188, 0.2)', padding: 5 },
+                                    td: { padding: 5, borderColor: '#78F0BC', borderWidth: 0.5 },
+                                    img: { maxWidth: width - 50 }
                                 }}
                                 renderersProps={{
                                     a: {
@@ -212,11 +249,36 @@ export default function EmailDetail() {
                                         },
                                     },
                                 }}
+                                defaultTextProps={{
+                                    selectable: true,
+                                }}
+                                enableExperimentalMarginCollapsing={true}
                             />
                         ) : (
-                            <Text style={styles.plainTextContent}>{email.text}</Text>
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                onLongPress={handleLongPress}
+                            >
+                                <Text
+                                    style={styles.plainTextContent}
+                                    selectable={true}
+                                >
+                                    {email.text || 'No content available'}
+                                </Text>
+                            </TouchableOpacity>
                         )}
                     </View>
+
+                    {/* Copy button for easier access */}
+                    <TouchableOpacity
+                        style={styles.copyButton}
+                        onPress={() => copyToClipboard(showHtml && htmlContentValid ?
+                            email.html?.replace(/<[^>]*>/g, ' ') || '' :
+                            email.text || '')}
+                    >
+                        <MaterialIcons name="content-copy" size={20} color="#78F0BC" />
+                        <Text style={styles.copyButtonText}>Copy Content</Text>
+                    </TouchableOpacity>
 
                     {/* Attachments */}
                     {email.hasAttachments && email.attachments && email.attachments.length > 0 && (
@@ -360,11 +422,14 @@ const styles = StyleSheet.create({
     htmlContent: {
         color: '#fff',
         fontSize: 16,
+        lineHeight: 24,
+        fontFamily: 'System',
     },
     plainTextContent: {
         color: '#fff',
         fontSize: 16,
         lineHeight: 24,
+        fontFamily: 'System',
     },
     loadingContainer: {
         flex: 1,
@@ -425,5 +490,20 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#999',
         marginTop: 2,
+    },
+    copyButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        padding: 10,
+        borderRadius: 8,
+        marginHorizontal: 10,
+        marginBottom: 10,
+    },
+    copyButtonText: {
+        color: '#78F0BC',
+        marginLeft: 8,
+        fontSize: 14,
     },
 });

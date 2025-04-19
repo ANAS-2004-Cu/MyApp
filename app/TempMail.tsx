@@ -10,6 +10,8 @@ import {
     Clipboard,
     ToastAndroid,
     Platform,
+    Modal,
+    FlatList,
 } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -29,6 +31,7 @@ export default function TempMail() {
     const [password, setPassword] = useState('');
     const [domains, setDomains] = useState<string[]>([]);
     const [selectedDomain, setSelectedDomain] = useState('');
+    const [showDomainModal, setShowDomainModal] = useState(false);
 
     // Initialize - check for existing account or prepare for new one
     useEffect(() => {
@@ -172,6 +175,17 @@ export default function TempMail() {
         router.push('/');
     };
 
+    // Open domain selection modal
+    const openDomainSelector = () => {
+        setShowDomainModal(true);
+    };
+
+    // Select a domain and close modal
+    const selectDomain = (domain: string) => {
+        setSelectedDomain(domain);
+        setShowDomainModal(false);
+    };
+
     // Render loading state
     if (initializing) {
         return (
@@ -207,6 +221,18 @@ export default function TempMail() {
                     ) : (
                         <View style={styles.createEmailSection}>
                             <Text style={styles.createEmailTitle}>Create a new temporary email</Text>
+
+                            {/* Domain selection button */}
+                            <TouchableOpacity
+                                style={styles.domainSelector}
+                                onPress={openDomainSelector}
+                            >
+                                <Text style={styles.domainSelectorText}>
+                                    @{selectedDomain}
+                                </Text>
+                                <MaterialIcons name="arrow-drop-down" size={24} color="#78F0BC" />
+                            </TouchableOpacity>
+
                             <TouchableOpacity
                                 style={styles.createButton}
                                 onPress={createTemporaryEmail}
@@ -255,6 +281,54 @@ export default function TempMail() {
                 <TouchableOpacity style={styles.homeButton} onPress={goHome}>
                     <Text style={styles.homeButtonText}>Back to Home</Text>
                 </TouchableOpacity>
+
+                {/* Domain selection modal */}
+                <Modal
+                    visible={showDomainModal}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setShowDomainModal(false)}
+                >
+                    <View style={styles.modalContainer}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Select Domain</Text>
+                                <TouchableOpacity
+                                    onPress={() => setShowDomainModal(false)}
+                                    style={styles.closeButton}
+                                >
+                                    <Ionicons name="close" size={24} color="#FF6B6B" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <FlatList
+                                data={domains}
+                                keyExtractor={(item) => item}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.domainItem,
+                                            selectedDomain === item && styles.selectedDomainItem
+                                        ]}
+                                        onPress={() => selectDomain(item)}
+                                    >
+                                        <Text style={[
+                                            styles.domainItemText,
+                                            selectedDomain === item && styles.selectedDomainText
+                                        ]}>
+                                            @{item}
+                                        </Text>
+                                        {selectedDomain === item && (
+                                            <Ionicons name="checkmark-circle" size={20} color="#78F0BC" />
+                                        )}
+                                    </TouchableOpacity>
+                                )}
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={styles.domainList}
+                            />
+                        </View>
+                    </View>
+                </Modal>
             </View>
         </ImageBackground>
     );
@@ -339,6 +413,22 @@ const styles = StyleSheet.create({
         color: '#fff',
         marginBottom: 20,
     },
+    domainSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(120, 240, 188, 0.3)',
+    },
+    domainSelectorText: {
+        fontSize: 16,
+        color: '#78F0BC',
+        marginRight: 8,
+    },
     createButton: {
         backgroundColor: '#78F0BC',
         paddingVertical: 12,
@@ -413,6 +503,59 @@ const styles = StyleSheet.create({
     homeButtonText: {
         fontSize: 16,
         color: '#000',
+        fontWeight: 'bold',
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        paddingHorizontal: 16,
+    },
+    modalContent: {
+        backgroundColor: 'rgba(0,0,0,0.9)',
+        borderRadius: 16,
+        width: '90%',
+        maxHeight: '70%',
+        borderWidth: 1,
+        borderColor: 'rgba(120, 240, 188, 0.3)',
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(120, 240, 188, 0.2)',
+    },
+    modalTitle: {
+        fontSize: 18,
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    closeButton: {
+        padding: 4,
+    },
+    domainList: {
+        padding: 8,
+    },
+    domainItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.1)',
+    },
+    selectedDomainItem: {
+        backgroundColor: 'rgba(120, 240, 188, 0.1)',
+    },
+    domainItemText: {
+        fontSize: 16,
+        color: '#fff',
+    },
+    selectedDomainText: {
+        color: '#78F0BC',
         fontWeight: 'bold',
     },
 });
