@@ -7,6 +7,7 @@ export default function Index() {
   const [projects, setProjects] = useState([
     { id: "1", title: "Guess Game", description: "A number guessing game with hints", to: "/Game1" as Href, icon: "casino" },
     { id: "2", title: "X_O (Normal)", description: "Classic Tic-Tac-Toe game", to: "/Game2" as Href, icon: "grid-on" },
+    { id: "3", title: "TEMP-MAIL", description: "Create temporary email addresses", to: "/TempMail" as Href, icon: "email" },
   ]);
 
   // Animation values for statistics

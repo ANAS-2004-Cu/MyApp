@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     overflow: "hidden"
   },
-  header:{
+  header: {
     fontSize: 30,
     color: "gold",
     fontWeight: "bold",
