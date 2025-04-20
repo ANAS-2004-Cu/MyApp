@@ -2,6 +2,7 @@ import { Text, View, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from "@expo/vector-icons";
 
 export default function Game2() {
   const [board1, setBoard1] = useState(Array(9).fill(null));
@@ -221,12 +222,15 @@ export default function Game2() {
 
   return (
     <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
-      <LinearGradient
-        colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-        style={styles.overlay}
-      />
       <View style={styles.container}>
-        <Text style={styles.header}>Tic Tac Toe</Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.push("/")}
+        >
+          <Ionicons name="arrow-back" size={28} color="#78F0BC" />
+        </TouchableOpacity>
+
+        <Text style={styles.title}>Tic Tac Toe</Text>
 
         <View style={styles.gameInfo}>
           <Text style={styles.modeTitle}>Playing Mode</Text>
@@ -260,7 +264,7 @@ export default function Game2() {
           styles.boardContainer,
           { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
         ]}>
-          <View style={styles.boards}>
+          <View style={styles.board}>
             <View style={styles.boardRow}>
               {renderSquare(0)}
               {renderSquare(1)}
@@ -293,12 +297,8 @@ export default function Game2() {
           )}
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.actionButton} onPress={resetGame}>
-            <Text style={styles.actionButtonText}>Reset Game</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/")}>
-            <Text style={styles.actionButtonText}>Home</Text>
+          <TouchableOpacity style={styles.resetButton} onPress={resetGame}>
+            <Text style={styles.resetButtonText}>Reset Game</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -307,39 +307,37 @@ export default function Game2() {
 }
 
 const styles = StyleSheet.create({
+  background: {
+    width: "100%",
+    height: "100%",
+  },
   container: {
     flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  backButton: {
+    position: "absolute",
+    top: 40,
+    left: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
   },
-  overlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  background: {
-    width: '100%',
-    height: '100%',
-  },
-  header: {
-    fontSize: 34,
-    color: "#FFD700",
+  title: {
+    fontSize: 28,
     fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 20,
     textAlign: "center",
-    position: "absolute",
-    top: 0,
-    width: "100%",
-    height: 60,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    textAlignVertical: "center",
-    alignContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    textShadowColor: "rgba(0,0,0,0.7)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 5,
   },
   gameInfo: {
     width: '100%',
@@ -349,9 +347,9 @@ const styles = StyleSheet.create({
   modeTitle: {
     fontSize: 24,
     fontWeight: "600",
-    color: "#E0F7FA",
+    color: "#fff",
     marginBottom: 15,
-    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowColor: 'rgba(0,0,0,0.7)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
@@ -362,36 +360,31 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modeButton: {
-    backgroundColor: "rgba(224, 247, 250, 0.2)",
+    backgroundColor: "rgba(120, 240, 188, 0.1)",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 25,
     width: 150,
     borderWidth: 1,
-    borderColor: "#80DEEA",
+    borderColor: "#78F0BC",
   },
   activeModeButton: {
-    backgroundColor: "rgba(128, 222, 234, 0.6)",
-    shadowColor: "#4DD0E1",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
+    backgroundColor: "rgba(120, 240, 188, 0.3)",
   },
   modeButtonText: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#E0F7FA",
+    color: "#78F0BC",
     textAlign: "center",
   },
   activeModeButtonText: {
-    color: "#FFFFFF",
+    color: "#fff",
   },
   turnIndicator: {
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
-    paddingVertical: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    paddingVertical: 10,
     paddingHorizontal: 15,
-    borderRadius: 20,
+    borderRadius: 10,
     marginVertical: 10,
   },
   turnText: {
@@ -405,13 +398,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
   },
-  boards: {
+  board: {
     width: (Math.min(Dimensions.get("window").width - 60, Dimensions.get("window").height - 420)),
     height: (Math.min(Dimensions.get("window").width - 60, Dimensions.get("window").height - 420)),
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: "rgba(0,0,0,0.7)",
+    borderRadius: 15,
     padding: 10,
+    marginBottom: 20,
   },
   boardRow: {
     flexDirection: "row",
@@ -421,73 +414,58 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#4DD0E1",
-    margin: 3,
-    borderRadius: 8,
-    backgroundColor: "rgba(224, 247, 250, 0.1)",
+    margin: 5,
+    backgroundColor: "rgba(120, 240, 188, 0.1)",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(120, 240, 188, 0.3)",
   },
   winningSquare: {
-    backgroundColor: "rgba(102, 187, 106, 0.3)",
-    borderColor: "#66BB6A",
+    backgroundColor: "rgba(120, 240, 188, 0.3)",
+    borderColor: "#78F0BC",
   },
   squareText: {
     fontSize: ((Math.min(Dimensions.get("window").width - 60, Dimensions.get("window").height - 420)) / 3) - 50,
     fontWeight: "bold",
   },
   xText: {
-    color: "#EF5350", // Red for X
+    color: "#78F0BC", // Changed to match Game3 style
   },
   oText: {
-    color: "#42A5F5", // Blue for O
+    color: "#FF9AA2", // Changed to match Game3 style
   },
   resultCard: {
     marginTop: 20,
     backgroundColor: "rgba(0, 0, 0, 0.7)",
-    borderRadius: 12,
+    borderRadius: 10,
     padding: 15,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: "#FFD700",
   },
   winnerText: {
-    fontSize: 28,
-    color: "#FFD700",
-    fontWeight: "900",
+    fontSize: 24,
+    color: "#78F0BC",
+    fontWeight: "bold",
     textAlign: "center",
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   drawText: {
-    fontSize: 28,
-    color: "#E0F7FA",
-    fontWeight: "900",
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    fontSize: 24,
+    color: "#78F0BC",
+    fontWeight: "bold",
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
     marginTop: 30,
   },
-  actionButton: {
-    backgroundColor: "rgba(0, 188, 212, 0.8)",
+  resetButton: {
+    backgroundColor: "rgba(120, 240, 188, 0.2)",
     paddingVertical: 12,
-    paddingHorizontal: 24,
+    paddingHorizontal: 30,
     borderRadius: 25,
-    width: 140,
-    shadowColor: "#00BCD4",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    borderWidth: 1,
+    borderColor: "#78F0BC",
   },
-  actionButtonText: {
+  resetButtonText: {
+    color: "#78F0BC",
     fontSize: 18,
-    textAlign: "center",
-    color: "#FFFFFF",
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
 });
