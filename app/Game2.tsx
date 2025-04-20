@@ -1,6 +1,7 @@
-import { Text, View, StyleSheet, ImageBackground, TouchableOpacity, Dimensions } from "react-native";
-import { useState } from "react";
+import { Text, View, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, Animated } from "react-native";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Game2() {
   const [board1, setBoard1] = useState(Array(9).fill(null));
@@ -15,10 +16,26 @@ export default function Game2() {
   const [count, setCount] = useState(0);
   const [count1, setCount1] = useState(0);
   const [count2, setCount2] = useState(0);
+  const [currentPlayer, setCurrentPlayer] = useState("X");
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   const mode = (type: number) => {
     if (typeBoard === type) { return; }
     else {
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true
+        })
+      ]).start();
+
       if (type === 1) {
         setBoard2(board.slice());
         setBoard(board1.slice());
@@ -52,8 +69,23 @@ export default function Game2() {
     }
     if (count < 9) { setCount(count + 1); }
     board[index] = isXNext ? "X" : "O";
+    setCurrentPlayer(isXNext ? "O" : "X");
     setWinner(calculateWinner(board));
     typeBoard === 1 ? computerMove() : setIsXNext(!isXNext);
+
+    Animated.spring(scaleAnim, {
+      toValue: 1.05,
+      friction: 3,
+      tension: 40,
+      useNativeDriver: true
+    }).start(() => {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: true
+      }).start();
+    });
   };
 
   const computerMove = () => {
@@ -115,63 +147,160 @@ export default function Game2() {
     return null;
   };
 
-  const renderSquare = (index: number) => (
-    <TouchableOpacity style={styles.square} onPress={() => handlePress(index)} activeOpacity={1}>
-      <Text style={styles.squareText}>{board[index]}</Text>
-    </TouchableOpacity>
-  );
+  const renderSquare = (index: number) => {
+    const isWinningSquare = winner && isPartOfWinningLine(index);
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.square,
+          isWinningSquare && styles.winningSquare
+        ]}
+        onPress={() => handlePress(index)}
+        activeOpacity={0.7}
+      >
+        <Text style={[
+          styles.squareText,
+          board[index] === "X" ? styles.xText : styles.oText
+        ]}>
+          {board[index]}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const isPartOfWinningLine = (index: number) => {
+    if (!winner) return false;
+
+    const lines = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6],
+    ];
+
+    for (let i = 0; i < lines.length; i++) {
+      const [a, b, c] = lines[i];
+      if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+        return index === a || index === b || index === c;
+      }
+    }
+
+    return false;
+  };
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true
+    }).start();
+  }, []);
 
   const resetGame = () => {
     setBoard(Array(9).fill(null));
     setWinner(null);
     setIsXNext(typeBoard === 1 ? true : isXNext);
+    setCurrentPlayer("X");
     setCount(0);
-  };
-  const router = useRouter();
 
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0.3,
+        duration: 200,
+        useNativeDriver: true
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true
+      })
+    ]).start();
+  };
+
+  const router = useRouter();
 
   return (
     <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
+      <LinearGradient
+        colors={['rgba(0,0,0,0.7)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+        style={styles.overlay}
+      />
       <View style={styles.container}>
-        <Text style={styles.header}>Tic Tac Toe_V1</Text>
-        <Text style={{ fontSize: 27, fontWeight: "bold", color: "lightblue", marginBottom: 15 }}>Playing Mode</Text>
-        <View style={{ flexDirection: "row", justifyContent: "space-around", width: "100%", marginBottom: 50 }}>
-          <TouchableOpacity style={typeBoard === 1 ? styles.hold : styles.player} onPress={() => mode(1)}>
-            <Text style={styles.playertext}>1 PLAYER</Text>
+        <Text style={styles.header}>Tic Tac Toe</Text>
+
+        <View style={styles.gameInfo}>
+          <Text style={styles.modeTitle}>Playing Mode</Text>
+
+          <View style={styles.modeSelectorContainer}>
+            <TouchableOpacity
+              style={[styles.modeButton, typeBoard === 1 && styles.activeModeButton]}
+              onPress={() => mode(1)}
+            >
+              <Text style={[styles.modeButtonText, typeBoard === 1 && styles.activeModeButtonText]}>1 PLAYER</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modeButton, typeBoard === 2 && styles.activeModeButton]}
+              onPress={() => mode(2)}
+            >
+              <Text style={[styles.modeButtonText, typeBoard === 2 && styles.activeModeButtonText]}>2 PLAYERS</Text>
+            </TouchableOpacity>
+          </View>
+
+          {!winner && count < (typeBoard === 1 ? 5 : 9) && (
+            <View style={styles.turnIndicator}>
+              <Text style={styles.turnText}>
+                {typeBoard === 1 && currentPlayer === "O" ? "Computer thinking..." : `Player ${currentPlayer}'s turn`}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <Animated.View style={[
+          styles.boardContainer,
+          { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }
+        ]}>
+          <View style={styles.boards}>
+            <View style={styles.boardRow}>
+              {renderSquare(0)}
+              {renderSquare(1)}
+              {renderSquare(2)}
+            </View>
+            <View style={styles.boardRow}>
+              {renderSquare(3)}
+              {renderSquare(4)}
+              {renderSquare(5)}
+            </View>
+            <View style={styles.boardRow}>
+              {renderSquare(6)}
+              {renderSquare(7)}
+              {renderSquare(8)}
+            </View>
+          </View>
+        </Animated.View>
+
+        {winner && (
+          <Animated.View style={[styles.resultCard, { opacity: fadeAnim }]}>
+            <Text style={styles.winnerText}>Winner: Player {winner}</Text>
+          </Animated.View>
+        )}
+
+        {((typeBoard === 2 && count === 9 && winner === null) ||
+          (typeBoard === 1 && count === 5 && winner === null)) && (
+            <Animated.View style={[styles.resultCard, { opacity: fadeAnim }]}>
+              <Text style={styles.drawText}>It's a Draw!</Text>
+            </Animated.View>
+          )}
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.actionButton} onPress={resetGame}>
+            <Text style={styles.actionButtonText}>Reset Game</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={typeBoard === 2 ? styles.hold : styles.player} onPress={() => mode(2)}>
-            <Text style={styles.playertext}>2 PLAYER</Text>
+
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push("/")}>
+            <Text style={styles.actionButtonText}>Home</Text>
           </TouchableOpacity>
         </View>
-        <View style={styles.boards}>
-
-
-          <View style={{ flexDirection: "row" }}>
-            {renderSquare(0)}
-            {renderSquare(1)}
-            {renderSquare(2)}
-          </View>
-          <View style={{ flexDirection: "row" }}>
-            {renderSquare(3)}
-            {renderSquare(4)}
-            {renderSquare(5)}
-          </View>
-          <View style={{ flexDirection: "row" }}>
-            {renderSquare(6)}
-            {renderSquare(7)}
-            {renderSquare(8)}
-          </View>
-
-
-        </View>
-        {winner && <Text style={styles.winnerText}>Winner Is: {winner}</Text>}
-        {((typeBoard === 2 && count === 9 && winner === null) || (typeBoard === 1 && count === 5 && winner === null)) && <Text style={styles.winnerText}>⚔⚔⚔ It's a Draw ⚔⚔⚔</Text>}
-        <TouchableOpacity style={styles.resetButton} onPress={resetGame}>
-          <Text style={styles.resetButtonText}>Reset</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.home} onPress={() => router.push("/")}>
-          <Text style={styles.resetButtonText}>Home</Text>
-        </TouchableOpacity>
       </View>
     </ImageBackground>
   );
@@ -182,92 +311,183 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    padding: 20,
   },
-  hold: {
-    backgroundColor: "lightblue",
-    padding: 10,
-    width: 150,
-    borderRadius: 20,
-    opacity: 0.5
-  },
-  player: {
-    backgroundColor: "lightblue",
-    padding: 10,
-    width: 150,
-    borderRadius: 20,
-  },
-  playertext: {
-    fontSize: 25,
-    fontWeight: "bold",
-    color: "black",
-    textAlign: "center",
+  overlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
   },
   background: {
     width: '100%',
     height: '100%',
   },
   header: {
-    fontSize: 30,
-    color: "gold",
+    fontSize: 34,
+    color: "#FFD700",
     fontWeight: "bold",
     textAlign: "center",
     position: "absolute",
     top: 0,
     width: "100%",
-    height: 50,
+    height: 60,
     backgroundColor: "rgba(0,0,0,0.5)",
     textAlignVertical: "center",
     alignContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  gameInfo: {
+    width: '100%',
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  modeTitle: {
+    fontSize: 24,
+    fontWeight: "600",
+    color: "#E0F7FA",
+    marginBottom: 15,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  modeSelectorContainer: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+    marginBottom: 20,
+  },
+  modeButton: {
+    backgroundColor: "rgba(224, 247, 250, 0.2)",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    width: 150,
+    borderWidth: 1,
+    borderColor: "#80DEEA",
+  },
+  activeModeButton: {
+    backgroundColor: "rgba(128, 222, 234, 0.6)",
+    shadowColor: "#4DD0E1",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modeButtonText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#E0F7FA",
+    textAlign: "center",
+  },
+  activeModeButtonText: {
+    color: "#FFFFFF",
+  },
+  turnIndicator: {
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    marginVertical: 10,
+  },
+  turnText: {
+    fontSize: 18,
+    color: "#FFFFFF",
+    fontWeight: "500",
+  },
+  boardContainer: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
   boards: {
-    width: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)),
-    height: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)),
-    borderRadius: 30,
+    width: (Math.min(Dimensions.get("window").width - 60, Dimensions.get("window").height - 420)),
+    height: (Math.min(Dimensions.get("window").width - 60, Dimensions.get("window").height - 420)),
+    borderRadius: 16,
     overflow: "hidden",
-    borderColor: "darkred",
-    borderWidth: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    padding: 10,
+  },
+  boardRow: {
+    flexDirection: "row",
+    flex: 1,
   },
   square: {
-    width: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)) / 3,
-    height: (Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)) / 3,
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 5,
-    borderTopWidth: 0,
-    borderLeftWidth: 0,
-    borderColor: "black",
+    borderWidth: 2,
+    borderColor: "#4DD0E1",
+    margin: 3,
+    borderRadius: 8,
+    backgroundColor: "rgba(224, 247, 250, 0.1)",
+  },
+  winningSquare: {
+    backgroundColor: "rgba(102, 187, 106, 0.3)",
+    borderColor: "#66BB6A",
   },
   squareText: {
-    fontSize: ((Math.min(Dimensions.get("window").width - 45, Dimensions.get("window").height - 400)) / 3) - 45,
-    color: "blue",
+    fontSize: ((Math.min(Dimensions.get("window").width - 60, Dimensions.get("window").height - 420)) / 3) - 50,
     fontWeight: "bold",
-
+  },
+  xText: {
+    color: "#EF5350", // Red for X
+  },
+  oText: {
+    color: "#42A5F5", // Blue for O
+  },
+  resultCard: {
+    marginTop: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    borderRadius: 12,
+    padding: 15,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: "#FFD700",
   },
   winnerText: {
-    fontSize: 30,
-    color: "gold",
-    marginTop: 10,
+    fontSize: 28,
+    color: "#FFD700",
     fontWeight: "900",
+    textAlign: "center",
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
-  resetButton: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: "cyan",
-    borderRadius: 20,
-    width: 150,
+  drawText: {
+    fontSize: 28,
+    color: "#E0F7FA",
+    fontWeight: "900",
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
-  resetButtonText: {
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 30,
+  },
+  actionButton: {
+    backgroundColor: "rgba(0, 188, 212, 0.8)",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 25,
+    width: 140,
+    shadowColor: "#00BCD4",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  actionButtonText: {
     fontSize: 18,
     textAlign: "center",
-    color: "black",
+    color: "#FFFFFF",
     fontWeight: "bold"
-  },
-  home: {
-    position: "absolute",
-    bottom: 30,
-    padding: 10,
-    backgroundColor: "cyan",
-    borderRadius: 20,
-    width: 150,
   },
 });
