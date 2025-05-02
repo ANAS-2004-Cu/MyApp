@@ -32,7 +32,6 @@ export default function EmailDetail() {
 
     const isMailGw = provider === 'mailgw';
 
-    // Ensure we have a valid email ID
     useEffect(() => {
         if (!id || typeof id !== 'string') {
             Alert.alert('Error', 'Invalid email ID');
@@ -43,24 +42,20 @@ export default function EmailDetail() {
         fetchEmailDetails();
     }, [id, provider]);
 
-    // Fetch email details based on provider
     const fetchEmailDetails = async () => {
         try {
             setLoading(true);
 
             if (isMailGw) {
-                // Fetch from Mail.GW API
                 const emailData = await getMessage(id as string);
                 setEmail(emailData);
 
-                // Set content
                 const html = emailData.html || `<div>${emailData.text || 'No content available'}</div>`;
                 const text = emailData.text || 'No content available';
 
                 setHtmlContent(html);
                 setPlainTextContent(text);
             } else {
-                // For GuerrillaMail
                 await initializeGuerrillaAPI();
                 const emailData = await GuerrillaAPI.fetchEmail(id as string);
 
@@ -70,9 +65,7 @@ export default function EmailDetail() {
 
                 setEmail(emailData);
 
-                // Extract the content
                 const html = emailData.mail_body || `<div>${emailData.mail_excerpt || 'No content available'}</div>`;
-                // Remove HTML tags for plain text
                 const text = emailData.mail_body ?
                     emailData.mail_body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() :
                     (emailData.mail_excerpt || 'No content available');
@@ -81,14 +74,12 @@ export default function EmailDetail() {
                 setPlainTextContent(text);
             }
         } catch (error) {
-            console.error('Error fetching email details:', error);
             Alert.alert('Error', 'Failed to load email details. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    // Initialize GuerrillaMail API with stored token
     const initializeGuerrillaAPI = async () => {
         try {
             const storedGuerrilla = await SecureStore.getItemAsync('guerrilla_data');
@@ -102,12 +93,11 @@ export default function EmailDetail() {
                 throw new Error('No stored GuerrillaMail session found');
             }
         } catch (error) {
-            console.error('Error initializing GuerrillaMail API:', error);
+            Alert.alert('Error', 'Failed to initialize email session. Please try again.');
             throw error;
         }
     };
 
-    // Handle delete email
     const handleDeleteEmail = async () => {
         if (!email) return;
 
@@ -125,12 +115,10 @@ export default function EmailDetail() {
                                 await deleteMessage(email.id);
                                 Alert.alert('Success', 'Email deleted successfully');
                             } else {
-                                // For GuerrillaMail - just handle locally since API doesn't support deletion
                                 Alert.alert('Success', 'Email removed from view');
                             }
                             router.back();
                         } catch (error) {
-                            console.error('Error deleting email:', error);
                             Alert.alert('Error', 'Failed to delete email. Please try again.');
                         }
                     },
@@ -139,7 +127,6 @@ export default function EmailDetail() {
         );
     };
 
-    // Format date for display
     const formatDate = (dateValue: string | number) => {
         if (!dateValue) return '';
 
@@ -160,23 +147,19 @@ export default function EmailDetail() {
         });
     };
 
-    // Copy content to clipboard
     const copyToClipboard = async (text: string) => {
         try {
             await Clipboard.setStringAsync(text);
             Alert.alert('Success', 'Content copied to clipboard');
         } catch (error) {
-            console.error('Failed to copy text:', error);
             Alert.alert('Error', 'Failed to copy text to clipboard');
         }
     };
 
-    // Toggle between HTML and plain text
     const toggleContentView = () => {
         setShowHtml(!showHtml);
     };
 
-    // If loading, show indicator
     if (loading) {
         return (
             <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
@@ -197,7 +180,6 @@ export default function EmailDetail() {
         );
     }
 
-    // If email failed to load
     if (!email) {
         return (
             <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
@@ -224,7 +206,6 @@ export default function EmailDetail() {
         );
     }
 
-    // Extract data based on provider
     const emailSubject = isMailGw ? email.subject : email.mail_subject;
     const fromName = isMailGw ? (email.from?.name || 'Unknown') :
         (email.mail_from?.match(/(.*)\s<(.*)>/) ? email.mail_from.match(/(.*)\s<(.*)>/)[1] : email.mail_from);
@@ -232,7 +213,6 @@ export default function EmailDetail() {
         (email.mail_from?.match(/(.*)\s<(.*)>/) ? email.mail_from.match(/(.*)\s<(.*)>/)[2] : email.mail_from);
     const dateDisplay = formatDate(isMailGw ? email.createdAt : email.mail_timestamp);
 
-    // Set up HTML wrapper for WebView
     const htmlWrapper = `
         <html>
             <head>
@@ -261,7 +241,6 @@ export default function EmailDetail() {
     return (
         <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
             <View style={styles.container}>
-                {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color="#78F0BC" />
@@ -275,7 +254,6 @@ export default function EmailDetail() {
                 </View>
 
                 <ScrollView style={styles.scrollContainer}>
-                    {/* Email metadata */}
                     <View style={styles.emailMetadata}>
                         <View style={styles.senderRow}>
                             <View style={styles.senderIcon}>
@@ -303,17 +281,14 @@ export default function EmailDetail() {
                         <Text style={styles.dateText}>{dateDisplay}</Text>
                     </View>
 
-                    {/* Toggle button */}
                     <TouchableOpacity style={styles.toggleButton} onPress={toggleContentView}>
                         <Text style={styles.toggleButtonText}>
                             View {showHtml ? 'Plain Text' : 'HTML'}
                         </Text>
                     </TouchableOpacity>
 
-                    {/* Email content */}
                     <View style={styles.emailContent}>
                         {showHtml ? (
-                            // HTML content in WebView
                             <WebView
                                 style={styles.webView}
                                 originWhitelist={['*']}
@@ -328,21 +303,17 @@ export default function EmailDetail() {
                                     </View>
                                 )}
                                 onNavigationStateChange={(event) => {
-                                    // Handle external URLs
                                     if (event.url !== 'about:blank' && event.navigationType === 'click') {
                                         Linking.openURL(event.url);
                                         return false;
                                     }
                                 }}
                                 onError={(syntheticEvent) => {
-                                    const { nativeEvent } = syntheticEvent;
-                                    console.error('WebView error:', nativeEvent);
-                                    setShowHtml(false); // Fall back to plain text on error
+                                    setShowHtml(false);
                                 }}
                                 backgroundColor="transparent"
                             />
                         ) : (
-                            // Plain text content
                             <ScrollView style={styles.plainTextScroll}>
                                 <TouchableOpacity
                                     activeOpacity={0.8}
@@ -356,7 +327,6 @@ export default function EmailDetail() {
                         )}
                     </View>
 
-                    {/* Copy button */}
                     <TouchableOpacity
                         style={styles.copyButton}
                         onPress={() => copyToClipboard(plainTextContent)}
@@ -365,7 +335,6 @@ export default function EmailDetail() {
                         <Text style={styles.copyButtonText}>Copy Content</Text>
                     </TouchableOpacity>
 
-                    {/* Attachments (Mail.GW only) */}
                     {isMailGw && email.hasAttachments && email.attachments && email.attachments.length > 0 && (
                         <View style={styles.attachmentsContainer}>
                             <Text style={styles.attachmentsTitle}>
@@ -387,7 +356,6 @@ export default function EmailDetail() {
                                                 await Sharing.shareAsync(result.uri);
                                             }
                                         } catch (error) {
-                                            console.error('Error downloading attachment:', error);
                                             Alert.alert('Error', 'Failed to download attachment');
                                         }
                                     }}

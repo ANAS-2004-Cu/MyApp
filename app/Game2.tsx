@@ -1,7 +1,6 @@
 import { Text, View, StyleSheet, ImageBackground, TouchableOpacity, Dimensions, Animated } from "react-native";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "expo-router";
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from "@expo/vector-icons";
 
 export default function Game2() {
@@ -20,55 +19,68 @@ export default function Game2() {
   const [currentPlayer, setCurrentPlayer] = useState("X");
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
+  const router = useRouter();
 
   const mode = (type: number) => {
     if (typeBoard === type) { return; }
-    else {
-      Animated.sequence([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true
-        }),
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true
-        })
-      ]).start();
 
-      if (type === 1) {
-        setBoard2(board.slice());
-        setBoard(board1.slice());
-        setWinner2(winner);
-        setWinner(winner1);
-        setIsXNext1(isXNext);
-        setIsXNext(true);
-        setCount2(count);
-        setCount(count1);
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true
+      })
+    ]).start();
 
-      }
-      if (type === 2) {
-        setBoard1(board.slice());
-        setBoard(board2.slice());
-        setWinner1(winner);
-        setWinner(winner2);
-        setIsXNext(isXNext1);
-        setCount1(count);
-        setCount(count2);
-      }
+    if (type === 1) {
+      setBoard2(board.slice());
+      setBoard(board1.slice());
+      setWinner2(winner);
+      setWinner(winner1);
+      setIsXNext1(isXNext);
+      setIsXNext(true);
+      setCount2(count);
+      setCount(count1);
     }
+
+    if (type === 2) {
+      setBoard1(board.slice());
+      setBoard(board2.slice());
+      setWinner1(winner);
+      setWinner(winner2);
+      setIsXNext(isXNext1);
+      setCount1(count);
+      setCount(count2);
+    }
+
     setTypeBoard(type);
   }
 
   const handlePress = (index: number) => {
-    if (typeBoard === 1 && count === 5 && winner === null) { return alert("👻 Game Over 👻 ,Please Rest Game 🔄"); }
-    if (typeBoard === 2 && count === 9 && winner === null) { return alert("👻 Game Over 👻 ,Please Rest Game 🔄"); }
+    if (typeBoard === 1 && count === 5 && winner === null) {
+      return alert("👻 Game Over 👻 ,Please Rest Game 🔄");
+    }
+
+    if (typeBoard === 2 && count === 9 && winner === null) {
+      return alert("👻 Game Over 👻 ,Please Rest Game 🔄");
+    }
+
     if (board[index] || winner) {
-      if (winner) { return alert(`Game Over ✨ ${winner} ✨ Is 🎊 WINNER 🎉`); }
+      if (winner) {
+        return alert(`Game Over ✨ ${winner} ✨ Is 🎊 WINNER 🎉`);
+      }
       return;
     }
-    if (count < 9) { setCount(count + 1); }
+
+    if (count < 9) {
+      setCount(count + 1);
+    }
+
     board[index] = isXNext ? "X" : "O";
     setCurrentPlayer(isXNext ? "O" : "X");
     setWinner(calculateWinner(board));
@@ -103,48 +115,43 @@ export default function Game2() {
 
   const findBestMove = (board: (string | null)[]) => {
     const lines = [
-      [0, 1, 2],
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6],
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8],
-      [2, 4, 6],
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6],
     ];
+
     for (let i = 0; i < lines.length; i++) {
       const [a, b, c] = lines[i];
       if (board[a] === "O" && board[b] === "O" && board[c] === null) return c;
       if (board[a] === "O" && board[b] === null && board[c] === "O") return b;
       if (board[a] === null && board[b] === "O" && board[c] === "O") return a;
     }
+
     for (let i = 0; i < lines.length; i++) {
       const [a, b, c] = lines[i];
       if (board[a] === "X" && board[b] === "X" && board[c] === null) return c;
       if (board[a] === "X" && board[b] === null && board[c] === "X") return b;
       if (board[a] === null && board[b] === "X" && board[c] === "X") return a;
     }
+
     let availableMoves = board.map((val, idx) => val === null ? idx : null).filter(val => val !== null);
     return availableMoves[Math.floor(Math.random() * availableMoves.length)];
   };
 
   const calculateWinner = (board: (string | null)[]) => {
     const lines = [
-      [0, 1, 2],
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6],
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8],
-      [2, 4, 6],
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6],
     ];
+
     for (let i = 0; i < lines.length; i++) {
       const [a, b, c] = lines[i];
       if (board[a] && board[a] === board[b] && board[a] === board[c]) {
         return board[a];
       }
     }
+
     return null;
   };
 
@@ -217,8 +224,6 @@ export default function Game2() {
       })
     ]).start();
   };
-
-  const router = useRouter();
 
   return (
     <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
@@ -429,10 +434,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   xText: {
-    color: "#78F0BC", // Changed to match Game3 style
+    color: "#78F0BC",
   },
   oText: {
-    color: "#FF9AA2", // Changed to match Game3 style
+    color: "#FF9AA2",
   },
   resultCard: {
     marginTop: 20,

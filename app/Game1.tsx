@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet, TextInput, ImageBackground, useWindowDimensions, Dimensions } from "react-native";
+import { Text, View, StyleSheet, TextInput, ImageBackground, useWindowDimensions } from "react-native";
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from "expo-router";
 import { colors, spacing, fontSizes, borderRadius } from '../styles/theme';
@@ -27,10 +27,6 @@ export default function Game1() {
   const [guessHistory, setGuessHistory] = useState<{ value: number; result: 'high' | 'low' | 'correct' }[]>([]);
   const MAX_TRIES = 10;
   const { height } = useWindowDimensions();
-
-  useEffect(() => {
-    console.log('Random number is: ', randomNumber);
-  }, [randomNumber]);
 
   function reset() {
     setRandomNumber(Math.floor(Math.random() * 100));
@@ -74,7 +70,6 @@ export default function Game1() {
       return;
     }
 
-    // Only proceed if the input is valid
     const guessResult = { value, result: 'low' as 'high' | 'low' | 'correct' };
 
     if (randomNumber === value) {

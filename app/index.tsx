@@ -1,5 +1,5 @@
 import { Text, View, StyleSheet, ImageBackground, FlatList, TouchableOpacity, Dimensions, Image } from "react-native";
-import { Href, Link, router } from "expo-router";
+import { Href, router } from "expo-router";
 import { useState, useEffect } from "react";
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 
@@ -11,11 +11,9 @@ export default function Index() {
     { id: "4", title: "TEMP-MAIL", description: "Create temporary email addresses", to: "/TempMail" as Href, icon: "email" },
   ]);
 
-  // Animation values for statistics
   const [animatedStats, setAnimatedStats] = useState({ projects: 0, completed: 0, rating: 0 });
 
   useEffect(() => {
-    // Simple animation for stats counters
     const timer = setTimeout(() => {
       setAnimatedStats({
         projects: projects.length,
@@ -48,14 +46,12 @@ export default function Index() {
   return (
     <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
       <View style={styles.container}>
-        {/* Header with name */}
         <View style={styles.header}>
           <Text style={styles.headerText}>Welcome to</Text>
           <Text style={styles.nameText}>ANAS GAMAL</Text>
           <Text style={styles.subHeaderText}>Gaming Portfolio</Text>
         </View>
 
-        {/* Stats section */}
         <View style={styles.statsContainer}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{animatedStats.projects}</Text>
@@ -71,7 +67,6 @@ export default function Index() {
           </View>
         </View>
 
-        {/* Project list section */}
         <View style={styles.projectsSection}>
           <Text style={styles.sectionTitle}>
             <Ionicons name="game-controller" size={20} color="#78F0BC" /> My Projects
@@ -85,7 +80,6 @@ export default function Index() {
           />
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>© 2023 Anas Gamal</Text>
         </View>
