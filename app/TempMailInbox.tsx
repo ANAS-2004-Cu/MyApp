@@ -13,7 +13,7 @@ import {
 import { router } from 'expo-router';
 import { MaterialIcons, Ionicons, FontAwesome } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
-import { getMessages, Email, deleteMessage } from '../utils/tempMailApi';
+import { getMessages, Email, deleteMessage } from '../utils/tempMailService';
 
 export default function TempMailInbox() {
     const [loading, setLoading] = useState(true);
@@ -30,12 +30,13 @@ export default function TempMailInbox() {
     // Load user email from secure storage
     const loadUserData = async () => {
         try {
-            const storedEmail = await SecureStore.getItemAsync('temp_email');
-            if (storedEmail) {
-                setEmail(storedEmail);
+            const storedMailGw = await SecureStore.getItemAsync('mailgw_data');
+            if (storedMailGw) {
+                const data = JSON.parse(storedMailGw);
+                setEmail(data.email);
             } else {
                 // No email found, redirect to main screen
-                Alert.alert('Error', 'No active email found. Please create one first.');
+                Alert.alert('Error', 'No active Mail.GW email found. Please create one first.');
                 router.replace('/TempMail');
             }
         } catch (error) {
@@ -92,7 +93,7 @@ export default function TempMailInbox() {
     const viewEmailDetails = (emailId: string) => {
         router.push({
             pathname: '/EmailDetail',
-            params: { id: emailId }
+            params: { id: emailId, provider: 'mailgw' }
         });
     };
 
@@ -149,7 +150,7 @@ export default function TempMailInbox() {
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color="#78F0BC" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Inbox</Text>
+                    <Text style={styles.headerTitle}>Mail.GW Inbox</Text>
                     <TouchableOpacity style={styles.refreshButton} onPress={onRefresh}>
                         <Ionicons name="refresh" size={24} color="#78F0BC" />
                     </TouchableOpacity>

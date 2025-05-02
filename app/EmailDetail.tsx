@@ -13,48 +13,97 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import RenderHtml from 'react-native-render-html';
+import { WebView } from 'react-native-webview';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as Clipboard from 'expo-clipboard';
-import Toast from 'react-native-toast-message';
-import { getMessage, Email, deleteMessage } from '../utils/tempMailApi';
+import { getMessage, deleteMessage } from '../utils/tempMailService';
+import * as GuerrillaAPI from '../utils/tempMailService';
+import * as SecureStore from 'expo-secure-store';
 
 export default function EmailDetail() {
-    const { id } = useLocalSearchParams();
+    const { id, provider } = useLocalSearchParams();
     const [loading, setLoading] = useState(true);
-    const [email, setEmail] = useState<Email | null>(null);
+    const [email, setEmail] = useState<any>(null);
+    const [htmlContent, setHtmlContent] = useState('');
+    const [plainTextContent, setPlainTextContent] = useState('');
     const [showHtml, setShowHtml] = useState(true);
-    const [htmlContentValid, setHtmlContentValid] = useState(true);
     const { width } = useWindowDimensions();
-    const [selectedText, setSelectedText] = useState('');
 
-    // Fetch email details on component mount
+    const isMailGw = provider === 'mailgw';
+
+    // Ensure we have a valid email ID
     useEffect(() => {
-        fetchEmailDetails();
-    }, [id]);
-
-    // Fetch email details from API
-    const fetchEmailDetails = async () => {
         if (!id || typeof id !== 'string') {
             Alert.alert('Error', 'Invalid email ID');
             router.back();
             return;
         }
 
+        fetchEmailDetails();
+    }, [id, provider]);
+
+    // Fetch email details based on provider
+    const fetchEmailDetails = async () => {
         try {
             setLoading(true);
-            const emailData = await getMessage(id);
-            setEmail(emailData);
 
-            // Check if HTML content exists and is a string before calling trim()
-            setHtmlContentValid(typeof emailData.html === 'string' && emailData.html.trim().length > 0);
+            if (isMailGw) {
+                // Fetch from Mail.GW API
+                const emailData = await getMessage(id as string);
+                setEmail(emailData);
+
+                // Set content
+                const html = emailData.html || `<div>${emailData.text || 'No content available'}</div>`;
+                const text = emailData.text || 'No content available';
+
+                setHtmlContent(html);
+                setPlainTextContent(text);
+            } else {
+                // For GuerrillaMail
+                await initializeGuerrillaAPI();
+                const emailData = await GuerrillaAPI.fetchEmail(id as string);
+
+                if (!emailData) {
+                    throw new Error('Failed to fetch email data');
+                }
+
+                setEmail(emailData);
+
+                // Extract the content
+                const html = emailData.mail_body || `<div>${emailData.mail_excerpt || 'No content available'}</div>`;
+                // Remove HTML tags for plain text
+                const text = emailData.mail_body ?
+                    emailData.mail_body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() :
+                    (emailData.mail_excerpt || 'No content available');
+
+                setHtmlContent(html);
+                setPlainTextContent(text);
+            }
         } catch (error) {
             console.error('Error fetching email details:', error);
             Alert.alert('Error', 'Failed to load email details. Please try again.');
-            router.back();
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Initialize GuerrillaMail API with stored token
+    const initializeGuerrillaAPI = async () => {
+        try {
+            const storedGuerrilla = await SecureStore.getItemAsync('guerrilla_data');
+            if (storedGuerrilla) {
+                const data = JSON.parse(storedGuerrilla);
+                GuerrillaAPI.initializeFromStoredData({
+                    sid_token: data.sid_token,
+                    email_user: data.email_user
+                });
+            } else {
+                throw new Error('No stored GuerrillaMail session found');
+            }
+        } catch (error) {
+            console.error('Error initializing GuerrillaMail API:', error);
+            throw error;
         }
     };
 
@@ -72,7 +121,13 @@ export default function EmailDetail() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await deleteMessage(email.id);
+                            if (isMailGw) {
+                                await deleteMessage(email.id);
+                                Alert.alert('Success', 'Email deleted successfully');
+                            } else {
+                                // For GuerrillaMail - just handle locally since API doesn't support deletion
+                                Alert.alert('Success', 'Email removed from view');
+                            }
                             router.back();
                         } catch (error) {
                             console.error('Error deleting email:', error);
@@ -84,9 +139,17 @@ export default function EmailDetail() {
         );
     };
 
-    // Format date
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
+    // Format date for display
+    const formatDate = (dateValue: string | number) => {
+        if (!dateValue) return '';
+
+        let date;
+        if (typeof dateValue === 'string') {
+            date = new Date(dateValue);
+        } else {
+            date = new Date(dateValue * 1000);
+        }
+
         return date.toLocaleString('en-US', {
             weekday: 'long',
             year: 'numeric',
@@ -97,74 +160,103 @@ export default function EmailDetail() {
         });
     };
 
-    // Download attachment
-    const downloadAttachment = async (attachment: any) => {
+    // Copy content to clipboard
+    const copyToClipboard = async (text: string) => {
         try {
-            const fileUri = FileSystem.documentDirectory + attachment.filename;
-            const downloadResumable = FileSystem.createDownloadResumable(
-                attachment.downloadUrl,
-                fileUri
-            );
-
-            const downloadResult = await downloadResumable.downloadAsync();
-
-            if (downloadResult && downloadResult.uri) {
-                await Sharing.shareAsync(downloadResult.uri);
-            }
+            await Clipboard.setStringAsync(text);
+            Alert.alert('Success', 'Content copied to clipboard');
         } catch (error) {
-            console.error('Error downloading attachment:', error);
-            Alert.alert('Error', 'Failed to download attachment. Please try again.');
+            console.error('Failed to copy text:', error);
+            Alert.alert('Error', 'Failed to copy text to clipboard');
         }
     };
 
-    // Toggle between HTML and plain text view
+    // Toggle between HTML and plain text
     const toggleContentView = () => {
         setShowHtml(!showHtml);
     };
 
-    // Copy text to clipboard
-    const copyToClipboard = async (text: string) => {
-        try {
-            await Clipboard.setStringAsync(text);
-            Alert.alert('Success', 'Text copied to clipboard');
-        } catch (error) {
-            console.error('Failed to copy text:', error);
-        }
-    };
-
-    // Add long press handler for plain text
-    const handleLongPress = () => {
-        if (email?.text) {
-            copyToClipboard(email.text);
-        }
-    };
-
-    // If loading, show loading indicator
+    // If loading, show indicator
     if (loading) {
         return (
             <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#78F0BC" />
-                    <Text style={styles.loadingText}>Loading email...</Text>
+                <View style={styles.container}>
+                    <View style={styles.header}>
+                        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                            <Ionicons name="arrow-back" size={24} color="#78F0BC" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Loading email...</Text>
+                        <View style={{ width: 30 }} />
+                    </View>
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#78F0BC" />
+                        <Text style={styles.loadingText}>Loading email content...</Text>
+                    </View>
                 </View>
             </ImageBackground>
         );
     }
 
-    // If no email data, show error
+    // If email failed to load
     if (!email) {
         return (
             <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
-                <View style={styles.errorContainer}>
-                    <MaterialIcons name="error-outline" size={60} color="#FF6B6B" />
-                    <Text style={styles.errorText}>Failed to load email</Text>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                        <Text style={styles.backButtonText}>Go Back</Text>
-                    </TouchableOpacity>
+                <View style={styles.container}>
+                    <View style={styles.header}>
+                        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                            <Ionicons name="arrow-back" size={24} color="#78F0BC" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Error</Text>
+                        <View style={{ width: 30 }} />
+                    </View>
+                    <View style={styles.errorContainer}>
+                        <MaterialIcons name="error-outline" size={60} color="#FF6B6B" />
+                        <Text style={styles.errorText}>Failed to load email</Text>
+                        <TouchableOpacity
+                            style={styles.retryButton}
+                            onPress={fetchEmailDetails}
+                        >
+                            <Text style={styles.retryButtonText}>Try Again</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </ImageBackground>
         );
     }
+
+    // Extract data based on provider
+    const emailSubject = isMailGw ? email.subject : email.mail_subject;
+    const fromName = isMailGw ? (email.from?.name || 'Unknown') :
+        (email.mail_from?.match(/(.*)\s<(.*)>/) ? email.mail_from.match(/(.*)\s<(.*)>/)[1] : email.mail_from);
+    const fromEmail = isMailGw ? email.from?.address :
+        (email.mail_from?.match(/(.*)\s<(.*)>/) ? email.mail_from.match(/(.*)\s<(.*)>/)[2] : email.mail_from);
+    const dateDisplay = formatDate(isMailGw ? email.createdAt : email.mail_timestamp);
+
+    // Set up HTML wrapper for WebView
+    const htmlWrapper = `
+        <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {
+                        font-family: system-ui, -apple-system, sans-serif;
+                        color: white;
+                        background-color: transparent;
+                        padding: 10px;
+                        font-size: 16px;
+                        line-height: 1.5;
+                    }
+                    a { color: #78F0BC; }
+                    img { max-width: 100%; height: auto; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #555; padding: 8px; }
+                </style>
+            </head>
+            <body>
+                ${htmlContent}
+            </body>
+        </html>
+    `;
 
     return (
         <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
@@ -175,7 +267,7 @@ export default function EmailDetail() {
                         <Ionicons name="arrow-back" size={24} color="#78F0BC" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle} numberOfLines={1}>
-                        {email.subject || '(No subject)'}
+                        {emailSubject || '(No subject)'}
                     </Text>
                     <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteEmail}>
                         <MaterialIcons name="delete-outline" size={24} color="#FF6B6B" />
@@ -188,117 +280,125 @@ export default function EmailDetail() {
                         <View style={styles.senderRow}>
                             <View style={styles.senderIcon}>
                                 <Text style={styles.senderInitial}>
-                                    {email.from.name ? email.from.name.charAt(0).toUpperCase() : 'U'}
+                                    {(fromName?.charAt(0) || '?').toUpperCase()}
                                 </Text>
                             </View>
                             <View style={styles.senderInfo}>
-                                <Text style={styles.senderName}>{email.from.name || 'Unknown'}</Text>
-                                <Text style={styles.senderAddress}>{email.from.address}</Text>
+                                <Text style={styles.senderName}>{fromName || 'Unknown'}</Text>
+                                <Text style={styles.senderAddress}>{fromEmail || ''}</Text>
                             </View>
                         </View>
 
-                        <View style={styles.recipientContainer}>
-                            <Text style={styles.recipientLabel}>To: </Text>
-                            <Text style={styles.recipientAddress}>
-                                {email.to.map(recipient => recipient.address).join(', ')}
-                            </Text>
-                        </View>
+                        {isMailGw && email.to && (
+                            <View style={styles.recipientContainer}>
+                                <Text style={styles.recipientLabel}>To: </Text>
+                                <Text style={styles.recipientAddress}>
+                                    {Array.isArray(email.to) ?
+                                        email.to.map((recipient: any) => recipient.address).join(', ') :
+                                        ''}
+                                </Text>
+                            </View>
+                        )}
 
-                        <Text style={styles.dateText}>
-                            {formatDate(email.createdAt)}
-                        </Text>
+                        <Text style={styles.dateText}>{dateDisplay}</Text>
                     </View>
 
-                    {/* View toggle button - only show if HTML content is valid */}
-                    {htmlContentValid && (
-                        <TouchableOpacity style={styles.toggleButton} onPress={toggleContentView}>
-                            <Text style={styles.toggleButtonText}>
-                                View {showHtml ? 'Plain Text' : 'HTML'}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
+                    {/* Toggle button */}
+                    <TouchableOpacity style={styles.toggleButton} onPress={toggleContentView}>
+                        <Text style={styles.toggleButtonText}>
+                            View {showHtml ? 'Plain Text' : 'HTML'}
+                        </Text>
+                    </TouchableOpacity>
 
                     {/* Email content */}
                     <View style={styles.emailContent}>
-                        {showHtml && htmlContentValid ? (
-                            <RenderHtml
-                                contentWidth={width - 32}
-                                source={{ html: email.html || '<p>No HTML content available</p>' }}
-                                baseStyle={styles.htmlContent}
-                                tagsStyles={{
-                                    body: { color: '#fff', fontFamily: 'System' },
-                                    a: { color: '#78F0BC', textDecorationLine: 'underline' },
-                                    p: { color: '#fff', marginBottom: 10 },
-                                    div: { color: '#fff', marginBottom: 10 },
-                                    span: { color: '#fff' },
-                                    h1: { color: '#fff', fontSize: 24, fontWeight: 'bold', marginVertical: 10 },
-                                    h2: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginVertical: 8 },
-                                    h3: { color: '#fff', fontSize: 20, fontWeight: 'bold', marginVertical: 6 },
-                                    ul: { color: '#fff', marginLeft: 20 },
-                                    ol: { color: '#fff', marginLeft: 20 },
-                                    li: { color: '#fff', marginBottom: 5 },
-                                    table: { borderColor: '#78F0BC', borderWidth: 1 },
-                                    th: { backgroundColor: 'rgba(120, 240, 188, 0.2)', padding: 5 },
-                                    td: { padding: 5, borderColor: '#78F0BC', borderWidth: 0.5 },
-                                    img: { maxWidth: width - 50 }
+                        {showHtml ? (
+                            // HTML content in WebView
+                            <WebView
+                                style={styles.webView}
+                                originWhitelist={['*']}
+                                source={{ html: htmlWrapper }}
+                                scrollEnabled={true}
+                                javaScriptEnabled={true}
+                                domStorageEnabled={true}
+                                startInLoadingState={true}
+                                renderLoading={() => (
+                                    <View style={styles.webviewLoading}>
+                                        <ActivityIndicator size="small" color="#78F0BC" />
+                                    </View>
+                                )}
+                                onNavigationStateChange={(event) => {
+                                    // Handle external URLs
+                                    if (event.url !== 'about:blank' && event.navigationType === 'click') {
+                                        Linking.openURL(event.url);
+                                        return false;
+                                    }
                                 }}
-                                renderersProps={{
-                                    a: {
-                                        onPress: (_, href) => {
-                                            Linking.openURL(href);
-                                        },
-                                    },
+                                onError={(syntheticEvent) => {
+                                    const { nativeEvent } = syntheticEvent;
+                                    console.error('WebView error:', nativeEvent);
+                                    setShowHtml(false); // Fall back to plain text on error
                                 }}
-                                defaultTextProps={{
-                                    selectable: true,
-                                }}
-                                enableExperimentalMarginCollapsing={true}
+                                backgroundColor="transparent"
                             />
                         ) : (
-                            <TouchableOpacity
-                                activeOpacity={0.8}
-                                onLongPress={handleLongPress}
-                            >
-                                <Text
-                                    style={styles.plainTextContent}
-                                    selectable={true}
+                            // Plain text content
+                            <ScrollView style={styles.plainTextScroll}>
+                                <TouchableOpacity
+                                    activeOpacity={0.8}
+                                    onLongPress={() => copyToClipboard(plainTextContent)}
                                 >
-                                    {email.text || 'No content available'}
-                                </Text>
-                            </TouchableOpacity>
+                                    <Text style={styles.plainTextContent} selectable={true}>
+                                        {plainTextContent || 'No content available'}
+                                    </Text>
+                                </TouchableOpacity>
+                            </ScrollView>
                         )}
                     </View>
 
-                    {/* Copy button for easier access */}
+                    {/* Copy button */}
                     <TouchableOpacity
                         style={styles.copyButton}
-                        onPress={() => copyToClipboard(showHtml && htmlContentValid ?
-                            email.html?.replace(/<[^>]*>/g, ' ') || '' :
-                            email.text || '')}
+                        onPress={() => copyToClipboard(plainTextContent)}
                     >
                         <MaterialIcons name="content-copy" size={20} color="#78F0BC" />
                         <Text style={styles.copyButtonText}>Copy Content</Text>
                     </TouchableOpacity>
 
-                    {/* Attachments */}
-                    {email.hasAttachments && email.attachments && email.attachments.length > 0 && (
+                    {/* Attachments (Mail.GW only) */}
+                    {isMailGw && email.hasAttachments && email.attachments && email.attachments.length > 0 && (
                         <View style={styles.attachmentsContainer}>
                             <Text style={styles.attachmentsTitle}>
                                 Attachments ({email.attachments.length})
                             </Text>
-                            {email.attachments.map((attachment, index) => (
+                            {email.attachments.map((attachment: any, index: number) => (
                                 <TouchableOpacity
                                     key={index}
                                     style={styles.attachmentItem}
-                                    onPress={() => downloadAttachment(attachment)}
+                                    onPress={async () => {
+                                        try {
+                                            const fileUri = FileSystem.documentDirectory + attachment.filename;
+                                            const downloadResumable = FileSystem.createDownloadResumable(
+                                                attachment.downloadUrl,
+                                                fileUri
+                                            );
+                                            const result = await downloadResumable.downloadAsync();
+                                            if (result && result.uri) {
+                                                await Sharing.shareAsync(result.uri);
+                                            }
+                                        } catch (error) {
+                                            console.error('Error downloading attachment:', error);
+                                            Alert.alert('Error', 'Failed to download attachment');
+                                        }
+                                    }}
                                 >
                                     <MaterialIcons name="attachment" size={20} color="#78F0BC" />
                                     <View style={styles.attachmentDetails}>
                                         <Text style={styles.attachmentName} numberOfLines={1}>
-                                            {attachment.filename}
+                                            {attachment.filename || 'Attachment'}
                                         </Text>
                                         <Text style={styles.attachmentSize}>
-                                            {(attachment.size / 1024).toFixed(0)} KB
+                                            {attachment.size ? `${(attachment.size / 1024).toFixed(0)} KB` : ''}
                                         </Text>
                                     </View>
                                     <MaterialIcons name="download" size={20} color="#78F0BC" />
@@ -414,22 +514,33 @@ const styles = StyleSheet.create({
         fontSize: 12,
     },
     emailContent: {
-        padding: 16,
+        padding: 0,
         backgroundColor: 'rgba(0,0,0,0.4)',
         borderRadius: 8,
         margin: 10,
+        minHeight: 200,
     },
-    htmlContent: {
-        color: '#fff',
-        fontSize: 16,
-        lineHeight: 24,
-        fontFamily: 'System',
+    webView: {
+        height: 300,
+        backgroundColor: 'transparent',
+    },
+    plainTextScroll: {
+        padding: 16,
     },
     plainTextContent: {
         color: '#fff',
         fontSize: 16,
         lineHeight: 24,
-        fontFamily: 'System',
+    },
+    webviewLoading: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.3)',
     },
     loadingContainer: {
         flex: 1,
@@ -452,10 +563,15 @@ const styles = StyleSheet.create({
         color: '#fff',
         marginVertical: 20,
     },
-    backButtonText: {
+    retryButton: {
+        backgroundColor: 'rgba(120, 240, 188, 0.2)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    retryButtonText: {
         color: '#78F0BC',
         fontSize: 16,
-        padding: 10,
     },
     attachmentsContainer: {
         padding: 16,
@@ -499,6 +615,7 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 8,
         marginHorizontal: 10,
+        marginTop: 0,
         marginBottom: 10,
     },
     copyButtonText: {

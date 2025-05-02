@@ -11,6 +11,8 @@ export default function RootLayout() {
       <Stack.Screen name="TempMail" options={{ headerShown: false, statusBarHidden: true }} />
       <Stack.Screen name="TempMailInbox" options={{ headerShown: false, statusBarHidden: true }} />
       <Stack.Screen name="EmailDetail" options={{ headerShown: false, statusBarHidden: true }} />
+      <Stack.Screen name="GuerrillaMailInbox" options={{ headerShown: false, statusBarHidden: true }} />
+      <Stack.Screen name="GuerrillaEmailDetail" options={{ headerShown: false, statusBarHidden: true }} />
     </Stack>
   );
 }
