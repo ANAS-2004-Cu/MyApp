@@ -21,13 +21,11 @@ export default function TempMailInbox() {
     const [emails, setEmails] = useState<Email[]>([]);
     const [email, setEmail] = useState<string | null>(null);
 
-    // Load emails on component mount
     useEffect(() => {
         loadUserData();
         fetchEmails();
     }, []);
 
-    // Load user email from secure storage
     const loadUserData = async () => {
         try {
             const storedMailGw = await SecureStore.getItemAsync('mailgw_data');
@@ -35,23 +33,20 @@ export default function TempMailInbox() {
                 const data = JSON.parse(storedMailGw);
                 setEmail(data.email);
             } else {
-                // No email found, redirect to main screen
                 Alert.alert('Error', 'No active Mail.GW email found. Please create one first.');
                 router.replace('/TempMail');
             }
         } catch (error) {
-            console.error('Error loading user data:', error);
+            Alert.alert('Error', 'Failed to load user data. Please try again.');
         }
     };
 
-    // Fetch emails from API
     const fetchEmails = async () => {
         try {
             setLoading(true);
             const messages = await getMessages();
             setEmails(messages || []);
         } catch (error) {
-            console.error('Error fetching emails:', error);
             Alert.alert('Error', 'Failed to load emails. Please try again.');
         } finally {
             setLoading(false);
@@ -59,13 +54,11 @@ export default function TempMailInbox() {
         }
     };
 
-    // Refresh emails
     const onRefresh = useCallback(() => {
         setRefreshing(true);
         fetchEmails();
     }, []);
 
-    // Handle delete email
     const handleDeleteEmail = async (id: string) => {
         Alert.alert(
             'Delete Email',
@@ -80,7 +73,6 @@ export default function TempMailInbox() {
                             await deleteMessage(id);
                             setEmails(emails.filter(email => email.id !== id));
                         } catch (error) {
-                            console.error('Error deleting email:', error);
                             Alert.alert('Error', 'Failed to delete email. Please try again.');
                         }
                     },
@@ -89,7 +81,6 @@ export default function TempMailInbox() {
         );
     };
 
-    // View email details
     const viewEmailDetails = (emailId: string) => {
         router.push({
             pathname: '/EmailDetail',
@@ -97,7 +88,6 @@ export default function TempMailInbox() {
         });
     };
 
-    // Format date
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleString('en-US', {
@@ -108,7 +98,6 @@ export default function TempMailInbox() {
         });
     };
 
-    // Render email item
     const renderEmailItem = ({ item }: { item: Email }) => (
         <TouchableOpacity
             style={styles.emailItem}
@@ -145,7 +134,6 @@ export default function TempMailInbox() {
     return (
         <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
             <View style={styles.container}>
-                {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color="#78F0BC" />
@@ -156,7 +144,6 @@ export default function TempMailInbox() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Email address banner */}
                 {email && (
                     <View style={styles.emailBanner}>
                         <Ionicons name="mail" size={18} color="#78F0BC" />
@@ -166,7 +153,6 @@ export default function TempMailInbox() {
                     </View>
                 )}
 
-                {/* Email list */}
                 {loading && !refreshing ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#78F0BC" />

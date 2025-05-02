@@ -23,7 +23,6 @@ import * as GuerrillaAPI from '../utils/tempMailService';
 import { TempMailProvider, GUERRILLA_DOMAINS } from '../utils/tempMailService';
 import { useLocalSearchParams } from 'expo-router';
 
-
 export default function TempMail() {
     const { cachedEmails } = useLocalSearchParams();
     const [guerrillaCachedEmails, setGuerrillaCachedEmails] = useState<any[]>([]);
@@ -48,26 +47,20 @@ export default function TempMail() {
                     setGuerrillaCachedEmails(parsed);
                 }
             } catch (err) {
-                console.warn("Failed to parse cachedEmails:", err);
+                // Silent error for parsing cached emails
             }
         }
     }, [cachedEmails]);
 
-    // Set up initial state
     useEffect(() => {
         const setup = async () => {
             setIsInitializing(true);
             try {
-                // Check for existing accounts
                 await checkExistingAccounts();
 
-                // Load domains based on selected provider
                 if (selectedProvider === TempMailProvider.MailGW) {
                     await loadDomains();
                 } else {
-                    // Set guerrilla domains from the constant
-                    // Get initial Guerrilla email (session + sid_token)
-                    // استخدم البريد المحفوظ لو موجود
                     let emailData;
                     const existingGuerrillaRaw = await SecureStore.getItemAsync('guerrilla_data');
 
@@ -87,20 +80,16 @@ export default function TempMail() {
                         }));
                     }
 
-                    // جرّب الدومينات المتاحة وشوف إيه اللي بيشتغل فعلاً
                     const validDomains = await GuerrillaAPI.testGuerrillaDomains(GUERRILLA_DOMAINS, emailData.sidToken);
-
-                    // fallback: لو كلها فشلت، نستخدم القائمة الأصلية
                     const finalDomains = validDomains.length > 0 ? validDomains : GUERRILLA_DOMAINS;
 
                     setGuerrillaDomains(finalDomains);
                     setSelectedGuerrillaDomain(finalDomains[0]);
                 }
 
-                // Set random username
                 generateRandomUsername();
             } catch (error) {
-                console.error('Setup error:', error);
+                Alert.alert('Error', 'Failed to initialize. Please try again later.');
             } finally {
                 setIsInitializing(false);
             }
@@ -109,28 +98,24 @@ export default function TempMail() {
         setup();
     }, [selectedProvider]);
 
-    // Check for existing temporary email accounts
     const checkExistingAccounts = async () => {
         try {
-            // Check for Mail.GW account
             const mailGwData = await SecureStore.getItemAsync('mailgw_data');
             if (mailGwData) {
                 const data = JSON.parse(mailGwData);
                 setExistingMailGw(data.email);
             }
 
-            // Check for GuerrillaMail account
             const guerrillaData = await SecureStore.getItemAsync('guerrilla_data');
             if (guerrillaData) {
                 const data = JSON.parse(guerrillaData);
                 setExistingGuerrilla(data.email_addr);
             }
         } catch (error) {
-            console.error('Error checking existing accounts:', error);
+            Alert.alert('Error', 'Failed to check existing accounts.');
         }
     };
 
-    // Load available domains for Mail.GW
     const loadDomains = async () => {
         try {
             const domainsData = await getDomains();
@@ -140,7 +125,6 @@ export default function TempMail() {
                 setSelectedDomain(domainList[0] || '');
             }
         } catch (error) {
-            console.error('Error loading domains:', error);
             // Fallback domains in case API fails
             const fallbackDomains = ['mail.gw', 'mailgw.com'];
             setDomains(fallbackDomains);
@@ -148,17 +132,14 @@ export default function TempMail() {
         }
     };
 
-    // Generate random username
     const generateRandomUsername = () => {
         setUsername(generateRandomString(10));
     };
 
-    // Handle provider selection
     const selectProvider = (provider: TempMailProvider) => {
         setSelectedProvider(provider);
     };
 
-    // Create a new temporary email
     const createNewEmail = async () => {
         if (selectedProvider === TempMailProvider.MailGW) {
             await createMailGwEmail();
@@ -167,7 +148,6 @@ export default function TempMail() {
         }
     };
 
-    // Create new Mail.GW email
     const createMailGwEmail = async () => {
         try {
             if (!username || !selectedDomain) {
@@ -179,13 +159,10 @@ export default function TempMail() {
             const email = `${username}@${selectedDomain}`;
             const password = generateRandomString(12);
 
-            // Create account
             await createAccount(email, password);
 
-            // Login to get token
             const authData = await login(email, password);
 
-            // Save account data
             await SecureStore.setItemAsync('mailgw_data', JSON.stringify({
                 email,
                 password,
@@ -193,10 +170,8 @@ export default function TempMail() {
                 id: authData.id
             }));
 
-            // Update existing account info
             setExistingMailGw(email);
 
-            // Show success message instead of navigating
             Alert.alert(
                 'Success',
                 `Email ${email} created successfully!`,
@@ -211,7 +186,6 @@ export default function TempMail() {
                 ]
             );
         } catch (error) {
-            console.error('Error creating Mail.GW email:', error);
             Alert.alert(
                 'Error',
                 'Failed to create email account. The username might be taken or the service is temporarily unavailable.',
@@ -225,7 +199,6 @@ export default function TempMail() {
         }
     };
 
-    // Create new GuerrillaMail email
     const createGuerrillaEmail = async () => {
         try {
             if (!username) {
@@ -235,7 +208,6 @@ export default function TempMail() {
 
             setLoading(true);
 
-            // 1. Get temporary email (initial session)
             const emailData = await GuerrillaAPI.getEmailAddress();
 
             if (!emailData || !emailData.email) {
@@ -245,42 +217,31 @@ export default function TempMail() {
             let finalUsername = username;
             let finalDomain = selectedGuerrillaDomain;
 
-            // 2. Try to set custom username
             try {
                 const userResult = await GuerrillaAPI.setCustomEmailUser(username);
                 if (userResult?.email_addr) {
                     finalUsername = userResult.email_addr.split('@')[0];
                 }
             } catch (error) {
-                console.warn('Failed to set custom username, using default:', error);
                 finalUsername = emailData.emailUser;
             }
 
-            // 3. Try to set selected domain with better error handling
             try {
                 const domainResult = await GuerrillaAPI.setEmailDomain(selectedGuerrillaDomain);
 
                 if (domainResult?.email_addr) {
-                    // Success case - extract domain from full email address
                     finalDomain = domainResult.email_addr.split('@')[1];
                 } else if (domainResult?.simulated) {
-                    // Semi-success case - use selected domain but be aware it might not work
-                    console.log(`Using selected domain ${selectedGuerrillaDomain}, but it might not be applied correctly`);
                     finalDomain = selectedGuerrillaDomain;
                 } else {
-                    // Fallback case
-                    console.warn('Domain could not be set, using default Guerrilla domain');
                     finalDomain = emailData.email.split('@')[1];
                 }
             } catch (error) {
-                console.warn('Set domain failed completely, using default domain from initial email:', error);
                 finalDomain = emailData.email.split('@')[1];
             }
 
-            // 4. Construct final email address with the results we have
             const finalEmailAddr = `${finalUsername}@${finalDomain}`;
 
-            // 5. Save session/token locally
             await SecureStore.setItemAsync('guerrilla_data', JSON.stringify({
                 email_addr: finalEmailAddr,
                 sid_token: emailData.sidToken,
@@ -304,7 +265,6 @@ export default function TempMail() {
                 ]
             );
         } catch (error) {
-            console.error('Error creating GuerrillaMail email:', error);
             Alert.alert(
                 'Error',
                 'Failed to create GuerrillaMail account. Please try again later.',
@@ -315,8 +275,6 @@ export default function TempMail() {
         }
     };
 
-
-    // Access existing email inbox
     const accessExistingInbox = (provider: TempMailProvider) => {
         if (provider === TempMailProvider.MailGW) {
             router.push('/TempMailInbox');
@@ -330,34 +288,28 @@ export default function TempMail() {
         }
     };
 
-
-    // Copy email address to clipboard
     const copyToClipboard = async (text: string) => {
         try {
             await Clipboard.setStringAsync(text);
             Alert.alert('Success', 'Email address copied to clipboard');
         } catch (error) {
-            console.error('Failed to copy text:', error);
+            Alert.alert('Error', 'Failed to copy to clipboard');
         }
     };
 
-    // Toggle domain dropdown visibility
     const toggleDomainDropdown = () => {
         setDomainDropdownVisible(!domainDropdownVisible);
     };
 
-    // Select domain from dropdown
     const handleDomainSelect = (domain: string) => {
         setSelectedDomain(domain);
         setDomainDropdownVisible(false);
     };
 
-    // Toggle Guerrilla domain dropdown visibility
     const toggleGuerrillaDomainDropdown = () => {
         setGuerrillaDomainDropdownVisible(!guerrillaDomainDropdownVisible);
     };
 
-    // Select Guerrilla domain from dropdown
     const handleGuerrillaDomainSelect = (domain: string) => {
         setSelectedGuerrillaDomain(domain);
         setGuerrillaDomainDropdownVisible(false);

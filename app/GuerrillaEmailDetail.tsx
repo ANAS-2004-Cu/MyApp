@@ -23,12 +23,10 @@ export default function GuerrillaEmailDetail() {
     const [email, setEmail] = useState<any>(null);
     const { width } = useWindowDimensions();
 
-    // Fetch email details on component mount
     useEffect(() => {
         fetchEmailDetails();
     }, [id]);
 
-    // Fetch email details from API
     const fetchEmailDetails = async () => {
         if (!id || typeof id !== 'string') {
             Alert.alert('Error', 'Invalid email ID');
@@ -41,7 +39,6 @@ export default function GuerrillaEmailDetail() {
             const emailData = await GuerrillaAPI.fetchEmail(id);
             setEmail(emailData);
         } catch (error) {
-            console.error('Error fetching email details:', error);
             Alert.alert('Error', 'Failed to load email details. Please try again.');
             router.back();
         } finally {
@@ -49,7 +46,6 @@ export default function GuerrillaEmailDetail() {
         }
     };
 
-    // Format date
     const formatDate = (timestamp: number) => {
         const date = new Date(timestamp * 1000);
         return date.toLocaleString('en-US', {
@@ -62,17 +58,15 @@ export default function GuerrillaEmailDetail() {
         });
     };
 
-    // Copy text to clipboard
     const copyToClipboard = async (text: string) => {
         try {
             await Clipboard.setStringAsync(text);
             Alert.alert('Success', 'Text copied to clipboard');
         } catch (error) {
-            console.error('Failed to copy text:', error);
+            Alert.alert('Error', 'Failed to copy text to clipboard');
         }
     };
 
-    // If loading, show loading indicator
     if (loading) {
         return (
             <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
@@ -84,7 +78,6 @@ export default function GuerrillaEmailDetail() {
         );
     }
 
-    // If no email data, show error
     if (!email) {
         return (
             <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
@@ -99,7 +92,6 @@ export default function GuerrillaEmailDetail() {
         );
     }
 
-    // Extract display name and email address
     let displayName = email.mail_from;
     let emailAddress = '';
     const matches = email.mail_from.match(/(.*)\s<(.*)>/);
@@ -111,7 +103,6 @@ export default function GuerrillaEmailDetail() {
     return (
         <ImageBackground source={require("../assets/images/background.jpg")} style={styles.background}>
             <View style={styles.container}>
-                {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color="#78F0BC" />
@@ -123,7 +114,6 @@ export default function GuerrillaEmailDetail() {
                 </View>
 
                 <ScrollView style={styles.scrollContainer}>
-                    {/* Email metadata */}
                     <View style={styles.emailMetadata}>
                         <View style={styles.senderRow}>
                             <View style={styles.senderIcon}>
@@ -142,7 +132,6 @@ export default function GuerrillaEmailDetail() {
                         </Text>
                     </View>
 
-                    {/* Email content */}
                     <View style={styles.emailContent}>
                         <RenderHtml
                             contentWidth={width - 32}
@@ -179,7 +168,6 @@ export default function GuerrillaEmailDetail() {
                         />
                     </View>
 
-                    {/* Copy button for easier access */}
                     <TouchableOpacity
                         style={styles.copyButton}
                         onPress={() => copyToClipboard(email.mail_body?.replace(/<[^>]*>/g, ' ') || '')}

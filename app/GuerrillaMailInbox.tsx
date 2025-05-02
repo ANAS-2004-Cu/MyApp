@@ -15,14 +15,11 @@ import { MaterialIcons, Ionicons, FontAwesome } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import * as GuerrillaAPI from '../utils/tempMailService';
 import { GuerrillaEmailResponse, GuerrillaAddressData } from '../utils/tempMailService';
-import { useInterval } from '../utils/tempMailService';
 import { useLocalSearchParams } from 'expo-router';
-
 
 export default function GuerrillaMailInbox() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    // const [emails, setEmails] = useState<GuerrillaEmailResponse[]>([]);
     const [emailData, setEmailData] = useState<GuerrillaAddressData | null>(null);
     const [pollingEnabled, setPollingEnabled] = useState(true);
     const [tokenInitialized, setTokenInitialized] = useState(false);
@@ -37,21 +34,14 @@ export default function GuerrillaMailInbox() {
         }
     });
 
-
-
-    // Load emails on component mount with improved error handling
     useEffect(() => {
-        console.log("GuerrillaMailInbox mounted");
         loadUserData();
 
-        // Stop polling when component unmounts
         return () => {
-            console.log("GuerrillaMailInbox unmounted - stopping polling");
             setPollingEnabled(false);
         };
     }, []);
 
-    // Load user email from secure storage with better error recovery
     const loadUserData = async () => {
         try {
             setLoading(true);
@@ -59,18 +49,12 @@ export default function GuerrillaMailInbox() {
             const storedGuerrilla = await SecureStore.getItemAsync('guerrilla_data');
 
             if (storedGuerrilla) {
-                console.log("Found stored guerrilla data");
                 try {
                     const data = JSON.parse(storedGuerrilla) as GuerrillaAddressData;
                     setEmailData(data);
 
-                    // Initialize the API with the stored token
                     if (data.sid_token) {
-                        console.log("Initializing API with stored token:", data.sid_token.substring(0, 10) + "...");
-
-                        // Ensure we have both properties
                         if (!data.email_user) {
-                            console.warn("Missing email_user in stored data, using default");
                             data.email_user = data.email_addr.split('@')[0];
                         }
 
@@ -81,58 +65,35 @@ export default function GuerrillaMailInbox() {
 
                         if (success) {
                             setTokenInitialized(true);
-                            console.log("Token initialized successfully, API ready");
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                            const messages = await GuerrillaAPI.checkInbox();
 
-                            // Verify token by checking inbox
-                            try {
-                                console.log("Verifying token by fetching messages...");
-                                // Add a small delay to ensure initialization completes
-                                await new Promise(resolve => setTimeout(resolve, 300));
-                                const messages = await GuerrillaAPI.checkInbox();
-
-                                if (Array.isArray(messages)) {
-                                    console.log(`Successfully verified token with ${messages.length} emails`);
-                                    if (Array.isArray(messages)) {
-                                        setEmails(prevEmails => {
-                                            const existingIds = new Set(prevEmails.map(e => e.mail_id));
-                                            const newMessages = messages.filter(m => !existingIds.has(m.mail_id));
-                                            // لو مفيش رسائل جديدة، خليه يرجع القديمة زي ما هي
-                                            return newMessages.length > 0 ? [...newMessages, ...prevEmails] : prevEmails;
-                                        });
-                                    }
-
-                                    setSessionError(false);
-                                } else {
-                                    throw new Error("Invalid response format");
-                                }
-                            } catch (fetchError) {
-                                console.error("Error verifying token:", fetchError);
-                                setSessionError(true);
-                                // Try to re-initialize once more with a fresh token
-                                await getNewEmailAddress();
+                            if (Array.isArray(messages)) {
+                                setEmails(prevEmails => {
+                                    const existingIds = new Set(prevEmails.map(e => e.mail_id));
+                                    const newMessages = messages.filter(m => !existingIds.has(m.mail_id));
+                                    return newMessages.length > 0 ? [...newMessages, ...prevEmails] : prevEmails;
+                                });
+                                setSessionError(false);
+                            } else {
+                                throw new Error("Invalid response format");
                             }
                         } else {
-                            console.warn("Token initialization failed");
                             setSessionError(true);
                             await getNewEmailAddress();
                         }
                     } else {
-                        console.warn("No sid_token in stored data");
                         setSessionError(true);
                         await getNewEmailAddress();
                     }
                 } catch (parseError) {
-                    console.error("Error parsing stored data:", parseError);
                     setSessionError(true);
                     await getNewEmailAddress();
                 }
             } else {
-                // No email found, get a new one
-                console.log("No stored data found, getting new email address");
                 await getNewEmailAddress();
             }
         } catch (error) {
-            console.error('Error loading user data:', error);
             setSessionError(true);
             Alert.alert('Error', 'Failed to load email account. Please use the Reset button to get a new address.');
         } finally {
@@ -140,30 +101,23 @@ export default function GuerrillaMailInbox() {
         }
     };
 
-    // Get a new email address with better error handling
     const getNewEmailAddress = async () => {
         try {
             setLoading(true);
             setTokenInitialized(false);
             setSessionError(false);
 
-            // Clear any existing data first
             await SecureStore.deleteItemAsync('guerrilla_data');
 
-            console.log("Getting new email address...");
             const newAddress = await GuerrillaAPI.getEmailAddress();
 
             if (newAddress && newAddress.email && newAddress.sidToken) {
-                console.log("Got new email address:", newAddress.email);
-
-                // Ensure we have the email_user field
                 if (!newAddress.emailUser) {
                     newAddress.emailUser = newAddress.email.split('@')[0];
                 }
 
                 await saveEmailData(newAddress);
 
-                // Initialize with the new token
                 const success = GuerrillaAPI.initializeFromStoredData({
                     sid_token: newAddress.sidToken,
                     email_user: newAddress.emailUser
@@ -171,34 +125,27 @@ export default function GuerrillaMailInbox() {
 
                 if (success) {
                     setTokenInitialized(true);
-                    console.log("New API session initialized successfully");
 
-                    // Verify it works by fetching initial emails
                     try {
-                        // Add a small delay to ensure initialization completes
                         await new Promise(resolve => setTimeout(resolve, 300));
                         const messages = await GuerrillaAPI.checkInbox();
                         setEmails(Array.isArray(messages) ? messages : []);
                         setSessionError(false);
                     } catch (e) {
-                        console.warn("Initial inbox check failed:", e);
-                        // This is not critical, as inbox might just be empty
+                        // Inbox might be empty
                     }
 
                     return true;
                 } else {
-                    console.error("Failed to initialize with new token");
                     setSessionError(true);
                     return false;
                 }
             } else {
-                console.error("Failed to get valid email address");
                 setSessionError(true);
                 Alert.alert('Error', 'Failed to create a new GuerrillaMail address. Please try again later.');
                 return false;
             }
         } catch (error) {
-            console.error('Error getting new email address:', error);
             setSessionError(true);
             Alert.alert('Error', 'Failed to create a new GuerrillaMail address. Please try again later.');
             return false;
@@ -207,10 +154,8 @@ export default function GuerrillaMailInbox() {
         }
     };
 
-    // Save email data to secure storage
     const saveEmailData = async (data: { email: string, sidToken: string, emailUser: string }) => {
         try {
-            console.log("Saving email data:", data.email);
             const emailData = {
                 email_addr: data.email,
                 sid_token: data.sidToken,
@@ -220,22 +165,17 @@ export default function GuerrillaMailInbox() {
             setEmailData(emailData);
             await SecureStore.setItemAsync('guerrilla_data', JSON.stringify(emailData));
         } catch (error) {
-            console.error('Error saving email data:', error);
+            Alert.alert('Error', 'Failed to save email data.');
         }
     };
 
-    // Fetch emails with improved error handling and retry logic
     const fetchEmails = async (showLoader = true) => {
         if (showLoader) {
             setLoading(true);
         }
 
         try {
-            // Double-check initialization before making API calls
             if (!GuerrillaAPI.isInitialized(emailData?.sid_token || '')) {
-                console.warn('API not initialized for fetchEmails');
-
-                // Try to re-initialize from stored data
                 const storedGuerrilla = await SecureStore.getItemAsync('guerrilla_data');
                 if (storedGuerrilla) {
                     const data = JSON.parse(storedGuerrilla);
@@ -259,7 +199,6 @@ export default function GuerrillaMailInbox() {
                         return;
                     }
                 } else {
-                    // No stored data available, create new session
                     setSessionError(true);
                     if (showLoader) {
                         Alert.alert(
@@ -275,16 +214,10 @@ export default function GuerrillaMailInbox() {
                 }
             }
 
-            console.log("Fetching emails with initialized API...");
-
-            // First try to use checkInbox
             try {
                 const messages = await GuerrillaAPI.checkInbox();
 
                 if (Array.isArray(messages)) {
-                    console.log(`Fetched ${messages.length} emails`);
-
-                    // 🧠 دمج الرسائل الجديدة مع الحالية بدون تكرار
                     setEmails(prevEmails => {
                         const existingIds = new Set(prevEmails.map(e => e.mail_id));
                         const newMessages = messages.filter(m => !existingIds.has(m.mail_id));
@@ -294,19 +227,12 @@ export default function GuerrillaMailInbox() {
                     setSessionError(false);
                     return;
                 }
-                else {
-                    console.warn('Unexpected response format from checkInbox, trying alternative');
-                    // Fall through to alternative approach
-                }
             } catch (error) {
-                console.error('First fetch attempt failed:', error);
-                // Fall through to alternative approach
+                // Try alternative approach
             }
 
-            // Alternative approach - force a new address check to refresh the session
             try {
                 const url = `${GuerrillaAPI.GUERRILLA_BASE_URL}?f=get_email_address&sid_token=${emailData?.sid_token}`;
-                console.log("Trying alternative fetch method");
 
                 const response = await fetch(url, {
                     headers: {
@@ -316,25 +242,20 @@ export default function GuerrillaMailInbox() {
                 });
 
                 if (response.ok) {
-                    // Now try fetchEmails again
                     const messages = await GuerrillaAPI.checkInbox();
                     if (Array.isArray(messages)) {
-                        console.log(`Alternative fetch succeeded with ${messages.length} emails`);
                         setEmails(messages);
                         setSessionError(false);
                         return;
                     }
                 }
             } catch (altError) {
-                console.error('Alternative fetch failed:', altError);
+                // Alternative fetch failed
             }
 
-            // If we get here, both attempts failed
-            console.error('All fetch attempts failed');
             setSessionError(true);
-            setEmails([]);  // Clear the emails to avoid showing stale data
+            setEmails([]);
 
-            // Only show alert during manual actions, not background polling
             if (showLoader) {
                 Alert.alert(
                     'Session Error',
@@ -349,7 +270,6 @@ export default function GuerrillaMailInbox() {
                 );
             }
         } catch (error) {
-            console.error('Error fetching emails:', error);
             setSessionError(true);
             if (showLoader) {
                 Alert.alert('Error', 'Failed to load emails. Please try again or reset your session.');
@@ -362,14 +282,11 @@ export default function GuerrillaMailInbox() {
         }
     };
 
-    // Refresh emails
     const onRefresh = useCallback(() => {
-        console.log("Manual refresh triggered");
         setRefreshing(true);
         fetchEmails(false);
     }, [tokenInitialized]);
 
-    // Reset email address
     const resetEmailAddress = async () => {
         Alert.alert(
             'Reset Email Address',
@@ -380,17 +297,13 @@ export default function GuerrillaMailInbox() {
                     text: 'Reset',
                     onPress: async () => {
                         try {
-                            // Forget current session if possible
                             await GuerrillaAPI.forgetMe();
-
-                            // Get new address
                             const success = await getNewEmailAddress();
 
                             if (success) {
                                 Alert.alert('Success', `New email address: ${emailData?.email_addr}`);
                             }
                         } catch (error) {
-                            console.error('Error resetting email:', error);
                             Alert.alert('Error', 'Failed to reset email address.');
                         }
                     },
@@ -399,8 +312,6 @@ export default function GuerrillaMailInbox() {
         );
     };
 
-    // Handle delete email (not fully supported by GuerrillaMail API,
-    // but we can at least remove it from the local state)
     const handleDeleteEmail = (id: string) => {
         Alert.alert(
             'Delete Email',
@@ -418,7 +329,6 @@ export default function GuerrillaMailInbox() {
         );
     };
 
-    // View email details
     const viewEmailDetails = (emailId: string) => {
         router.push({
             pathname: '/EmailDetail',
@@ -426,7 +336,6 @@ export default function GuerrillaMailInbox() {
         });
     };
 
-    // Format timestamp to readable date
     const formatDate = (timestamp: number) => {
         const date = new Date(timestamp * 1000);
         return date.toLocaleString('en-US', {

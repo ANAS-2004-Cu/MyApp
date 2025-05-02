@@ -21,10 +21,8 @@ export default function Game3() {
     const [gameMode, setGameMode] = useState<"2-player" | "vs-computer" | null>(null);
     const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
 
-    // Computer move effect
     useEffect(() => {
         if (gameMode === "vs-computer" && !isXNext && !gameStatus.includes("wins")) {
-            // Add a small delay to make it seem like the computer is "thinking"
             const timeout = setTimeout(() => {
                 makeComputerMove();
             }, 700);
@@ -32,23 +30,17 @@ export default function Game3() {
         }
     }, [isXNext, gameMode, gameStatus]);
 
-    // Make a move for a player
     const makeMove = (index: number, currentPlayer: string, currentPositions: number[]) => {
         const newBoard = [...board];
 
-        // If player already has 3 markers, remove the oldest one
         if (currentPositions.length === 3) {
-            const oldestPosition = currentPositions.shift(); // Remove and get the oldest position
-            newBoard[oldestPosition!] = null; // Clear that position on the board
+            const oldestPosition = currentPositions.shift();
+            newBoard[oldestPosition!] = null;
         }
 
-        // Add new position to the player's positions array
         currentPositions.push(index);
-
-        // Update the board with the new marker
         newBoard[index] = currentPlayer;
 
-        // Update state
         setBoard(newBoard);
         if (currentPlayer === "X") {
             setXPositions([...currentPositions]);
@@ -56,7 +48,6 @@ export default function Game3() {
             setOPositions([...currentPositions]);
         }
 
-        // Check for winner
         const winner = calculateWinner(newBoard);
         if (winner) {
             if (gameMode === "vs-computer" && winner === "O") {
@@ -65,7 +56,6 @@ export default function Game3() {
                 setGameStatus(`Player ${winner} wins!`);
             }
         } else {
-            // Switch turns
             setIsXNext(currentPlayer === "O");
             if (gameMode === "vs-computer") {
                 setGameStatus(currentPlayer === "O" ? "Your turn" : "Computer is thinking...");
@@ -78,7 +68,6 @@ export default function Game3() {
     };
 
     const handleSquarePress = (index: number) => {
-        // If square is already occupied or game is over, do nothing
         if (board[index] || gameStatus.includes("wins")) {
             return;
         }
@@ -86,7 +75,6 @@ export default function Game3() {
         const currentPlayer = isXNext ? "X" : "O";
         const currentPositions = isXNext ? [...xPositions] : [...oPositions];
 
-        // In computer mode, only allow X (player) moves
         if (gameMode === "vs-computer" && !isXNext) {
             return;
         }
@@ -95,15 +83,12 @@ export default function Game3() {
     };
 
     const makeComputerMove = () => {
-        // If game is over, do nothing
         if (gameStatus.includes("wins")) {
             return;
         }
 
         const newBoard = [...board];
         const computerPositions = [...oPositions];
-
-        // Get best move based on current board state
         const bestMoveIndex = findBestMove(newBoard, xPositions, computerPositions);
 
         if (bestMoveIndex !== -1) {
@@ -112,34 +97,28 @@ export default function Game3() {
     };
 
     const findBestMove = (currentBoard: (string | null)[], playerPositions: number[], computerPositions: number[]): number => {
-        // Clone the arrays to avoid modifying the originals
         const boardCopy = [...currentBoard];
 
-        // Strategy 1: Win if possible
         const winningMove = findWinningMove(boardCopy, "O", computerPositions);
         if (winningMove !== -1) return winningMove;
 
-        // Strategy 2: Block player from winning
         const blockingMove = findWinningMove(boardCopy, "X", playerPositions);
         if (blockingMove !== -1) return blockingMove;
 
-        // Strategy 3: Take center if available
         if (boardCopy[4] === null) return 4;
 
-        // Strategy 4: Take corners
         const corners = [0, 2, 6, 8];
         const availableCorners = corners.filter(pos => boardCopy[pos] === null);
         if (availableCorners.length > 0) {
             return availableCorners[Math.floor(Math.random() * availableCorners.length)];
         }
 
-        // Strategy 5: Take any available spot
         const availableSpots = boardCopy.map((spot, idx) => spot === null ? idx : -1).filter(idx => idx !== -1);
         if (availableSpots.length > 0) {
             return availableSpots[Math.floor(Math.random() * availableSpots.length)];
         }
 
-        return -1; // No valid move found (shouldn't happen)
+        return -1;
     };
 
     const findWinningMove = (currentBoard: (string | null)[], marker: string, positions: number[]): number => {
@@ -149,23 +128,19 @@ export default function Game3() {
             [0, 4, 8], [2, 4, 6]             // diagonals
         ];
 
-        // Check if we can win in one move
         for (const [a, b, c] of lines) {
-            // Count markers in this line
             const lineMarkers = [currentBoard[a], currentBoard[b], currentBoard[c]];
             const markerCount = lineMarkers.filter(spot => spot === marker).length;
             const emptyCount = lineMarkers.filter(spot => spot === null).length;
 
-            // If we have 2 markers in a line and there's one empty spot, we can win
             if (markerCount === 2 && emptyCount === 1) {
-                // Find the empty position
                 if (currentBoard[a] === null) return a;
                 if (currentBoard[b] === null) return b;
                 if (currentBoard[c] === null) return c;
             }
         }
 
-        return -1; // No winning move found
+        return -1;
     };
 
     const calculateWinner = (squares: (string | null)[]) => {
@@ -216,7 +191,6 @@ export default function Game3() {
         );
     };
 
-    // Mode selection screen
     if (showModeSelection) {
         return (
             <ImageBackground
@@ -497,28 +471,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#fff",
         textAlign: "center",
-    },
-    // Keep the existing styles, but remove/comment out conflicting ones
-    modeContainer: {
-        // width: "100%",
-        // marginTop: 20,
-        // alignItems: "center",
-    },
-    modeButton: {
-        // backgroundColor: "rgba(120, 240, 188, 0.2)",
-        // paddingVertical: 16,
-        // paddingHorizontal: 40,
-        // borderRadius: 25,
-        // borderWidth: 1,
-        // borderColor: "#78F0BC",
-        // marginVertical: 10,
-        // width: "80%",
-        // alignItems: "center",
-    },
-    modeButtonText: {
-        // color: "#78F0BC",
-        // fontSize: 20,
-        // fontWeight: "bold",
     },
     buttonRow: {
         flexDirection: "row",
