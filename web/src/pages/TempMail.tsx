@@ -11,12 +11,23 @@ import {
   getDomains,
   TempMailProvider,
   GUERRILLA_DOMAINS,
+  createTempMailLolInbox,
+  getTempMailLolStoredData,
+  createMaildropAccount,
+  getMaildropStoredData,
 } from '../utils/tempMailService';
 import * as GuerrillaAPI from '../utils/tempMailService';
 import { useAlert } from '../context/AlertContext';
 import DomainSelectModal from '../components/DomainSelectModal';
 
 const CACHED_EMAILS_SESSION_KEY = 'guerrilla_cached_emails';
+
+const PROVIDER_LABELS: Record<TempMailProvider, string> = {
+  [TempMailProvider.MailTM]: 'Mail.TM',
+  [TempMailProvider.GuerrillaMail]: 'GuerrillaMail',
+  [TempMailProvider.TempMailLol]: 'TempMail.lol',
+  [TempMailProvider.Maildrop]: 'Maildrop.cc',
+};
 
 export default function TempMail() {
   const navigate = useNavigate();
@@ -42,9 +53,11 @@ export default function TempMail() {
   const [domains, setDomains] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [domainDropdownVisible, setDomainDropdownVisible] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<TempMailProvider>(TempMailProvider.MailGW);
-  const [existingMailGw, setExistingMailGw] = useState<string | null>(null);
+  const [selectedProvider, setSelectedProvider] = useState<TempMailProvider>(TempMailProvider.MailTM);
+  const [existingMailTm, setExistingMailTm] = useState<string | null>(null);
   const [existingGuerrilla, setExistingGuerrilla] = useState<string | null>(null);
+  const [existingTempMailLol, setExistingTempMailLol] = useState<string | null>(null);
+  const [existingMaildrop, setExistingMaildrop] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [guerrillaDomains, setGuerrillaDomains] = useState<string[]>(GUERRILLA_DOMAINS);
   const [selectedGuerrillaDomain, setSelectedGuerrillaDomain] = useState(GUERRILLA_DOMAINS[0]);
@@ -70,9 +83,9 @@ export default function TempMail() {
       try {
         await checkExistingAccounts();
 
-        if (selectedProvider === TempMailProvider.MailGW) {
+        if (selectedProvider === TempMailProvider.MailTM) {
           await loadDomains();
-        } else {
+        } else if (selectedProvider === TempMailProvider.GuerrillaMail) {
           let emailData;
           const existingGuerrillaRaw = await SecureStore.getItemAsync('guerrilla_data');
 
@@ -119,16 +132,28 @@ export default function TempMail() {
 
   const checkExistingAccounts = async () => {
     try {
-      const mailGwData = await SecureStore.getItemAsync('mailgw_data');
-      if (mailGwData) {
-        const data = JSON.parse(mailGwData);
-        setExistingMailGw(data.email);
+      const mailTmData =
+        (await SecureStore.getItemAsync('mailtm_data')) ||
+        (await SecureStore.getItemAsync('mailgw_data'));
+      if (mailTmData) {
+        const data = JSON.parse(mailTmData);
+        setExistingMailTm(data.email);
       }
 
       const guerrillaData = await SecureStore.getItemAsync('guerrilla_data');
       if (guerrillaData) {
         const data = JSON.parse(guerrillaData);
         setExistingGuerrilla(data.email_addr);
+      }
+
+      const tempMailLolData = getTempMailLolStoredData();
+      if (tempMailLolData?.address) {
+        setExistingTempMailLol(tempMailLolData.address);
+      }
+
+      const maildropData = getMaildropStoredData();
+      if (maildropData?.email) {
+        setExistingMaildrop(maildropData.email);
       }
     } catch {
       showAlert('Error', 'Failed to check existing accounts.');
@@ -138,20 +163,23 @@ export default function TempMail() {
   const loadDomains = async () => {
     try {
       const domainsData = await getDomains();
-      if (domainsData && Array.isArray(domainsData['hydra:member'])) {
-        const domainList = domainsData['hydra:member'].map((domain: any) => domain.domain);
+      const rawMembers = Array.isArray(domainsData)
+        ? domainsData
+        : domainsData?.['hydra:member'];
+      if (Array.isArray(rawMembers) && rawMembers.length > 0) {
+        const domainList = rawMembers.map((domain: any) => domain.domain).filter(Boolean);
         if (domainList.length > 0) {
           setDomains(domainList);
           setSelectedDomain(domainList[0] || '');
           return;
         }
       }
-      const fallbackDomains = ['mail.gw', 'mailgw.com'];
+      const fallbackDomains = ['dollicons.com', 'mail.tm'];
       setDomains(fallbackDomains);
       setSelectedDomain(fallbackDomains[0]);
     } catch {
       // Fallback domains in case API fails
-      const fallbackDomains = ['mail.gw', 'mailgw.com'];
+      const fallbackDomains = ['dollicons.com', 'mail.tm'];
       setDomains(fallbackDomains);
       setSelectedDomain(fallbackDomains[0]);
     }
@@ -166,10 +194,19 @@ export default function TempMail() {
   };
 
   const createNewEmail = async () => {
-    if (selectedProvider === TempMailProvider.MailGW) {
-      await createMailGwEmail();
-    } else {
-      await createGuerrillaEmail();
+    switch (selectedProvider) {
+      case TempMailProvider.MailTM:
+        await createMailTmEmail();
+        break;
+      case TempMailProvider.GuerrillaMail:
+        await createGuerrillaEmail();
+        break;
+      case TempMailProvider.TempMailLol:
+        await createTempMailLolEmail();
+        break;
+      case TempMailProvider.Maildrop:
+        await createMaildropEmail();
+        break;
     }
   };
 
@@ -182,7 +219,7 @@ export default function TempMail() {
     }
   };
 
-  const createMailGwEmail = async () => {
+  const createMailTmEmail = async () => {
     try {
       if (!username || !selectedDomain) {
         showAlert('Error', 'Please enter a username and select a domain');
@@ -198,7 +235,7 @@ export default function TempMail() {
       const authData = await login(email, password);
 
       await SecureStore.setItemAsync(
-        'mailgw_data',
+        'mailtm_data',
         JSON.stringify({
           email,
           password,
@@ -207,7 +244,7 @@ export default function TempMail() {
         })
       );
 
-      setExistingMailGw(email);
+      setExistingMailTm(email);
 
       showAlert('Success', `Email ${email} created successfully!`, [
         {
@@ -312,10 +349,72 @@ export default function TempMail() {
     }
   };
 
+  const createTempMailLolEmail = async () => {
+    try {
+      setLoading(true);
+      const data = await createTempMailLolInbox(username);
+      setExistingTempMailLol(data.address);
+
+      showAlert('Success', `Email ${data.address} created successfully!`, [
+        {
+          text: 'Copy Email',
+          onPress: () => copyToClipboard(data.address),
+        },
+        {
+          text: 'OK',
+        },
+      ]);
+    } catch {
+      showAlert(
+        'Error',
+        'Failed to create TempMail.lol inbox. Please try again later.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createMaildropEmail = async () => {
+    if (!username.trim()) {
+      showAlert('Error', 'Please enter a username');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const data = createMaildropAccount(username);
+      setExistingMaildrop(data.email);
+
+      showAlert('Success', `Email ${data.email} created successfully!`, [
+        {
+          text: 'Copy Email',
+          onPress: () => copyToClipboard(data.email),
+        },
+        {
+          text: 'OK',
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getExistingAddressForProvider = (provider: TempMailProvider): string | null => {
+    switch (provider) {
+      case TempMailProvider.MailTM:
+        return existingMailTm;
+      case TempMailProvider.GuerrillaMail:
+        return existingGuerrilla;
+      case TempMailProvider.TempMailLol:
+        return existingTempMailLol;
+      case TempMailProvider.Maildrop:
+        return existingMaildrop;
+    }
+  };
+
   const accessExistingInbox = (provider: TempMailProvider) => {
-    if (provider === TempMailProvider.MailGW) {
-      navigate('/TempMailInbox');
-    } else {
+    if (provider === TempMailProvider.GuerrillaMail) {
       try {
         window.sessionStorage.setItem(
           CACHED_EMAILS_SESSION_KEY,
@@ -325,6 +424,8 @@ export default function TempMail() {
         // Ignore sessionStorage errors
       }
       navigate('/GuerrillaMailInbox');
+    } else {
+      navigate(`/TempMailInbox?provider=${encodeURIComponent(provider)}`);
     }
   };
 
@@ -338,8 +439,21 @@ export default function TempMail() {
     setGuerrillaDomainDropdownVisible(false);
   };
 
-  const activeDomain =
-    selectedProvider === TempMailProvider.MailGW ? selectedDomain : selectedGuerrillaDomain;
+  const getPreviewEmail = () => {
+    switch (selectedProvider) {
+      case TempMailProvider.MailTM:
+        return `${username}@${selectedDomain}`;
+      case TempMailProvider.GuerrillaMail:
+        return `${username}@${selectedGuerrillaDomain}`;
+      case TempMailProvider.TempMailLol:
+        return `${username || 'random'}@(auto-assigned by TempMail.lol)`;
+      case TempMailProvider.Maildrop:
+        return `${username}@maildrop.cc`;
+    }
+  };
+
+  const activeExistingEmail = getExistingAddressForProvider(selectedProvider);
+  const activeProviderLabel = PROVIDER_LABELS[selectedProvider];
 
   return (
     <div className="app-background">
@@ -361,79 +475,57 @@ export default function TempMail() {
           {/* Provider Selection */}
           <div style={styles.providerContainer}>
             <div style={styles.sectionTitle}>Select Provider</div>
-            <div style={styles.providerButtons}>
-              <button
-                type="button"
-                style={{
-                  ...styles.providerButton,
-                  ...(selectedProvider === TempMailProvider.MailGW
-                    ? styles.providerButtonSelected
-                    : {}),
-                }}
-                onClick={() => selectProvider(TempMailProvider.MailGW)}
-              >
-                <span
-                  style={{
-                    ...styles.providerButtonText,
-                    ...(selectedProvider === TempMailProvider.MailGW
-                      ? styles.providerButtonTextSelected
-                      : {}),
-                  }}
-                >
-                  Mail.GW
-                </span>
-              </button>
-              <button
-                type="button"
-                style={{
-                  ...styles.providerButton,
-                  ...(selectedProvider === TempMailProvider.GuerrillaMail
-                    ? styles.providerButtonSelected
-                    : {}),
-                }}
-                onClick={() => selectProvider(TempMailProvider.GuerrillaMail)}
-              >
-                <span
-                  style={{
-                    ...styles.providerButtonText,
-                    ...(selectedProvider === TempMailProvider.GuerrillaMail
-                      ? styles.providerButtonTextSelected
-                      : {}),
-                  }}
-                >
-                  GuerrillaMail
-                </span>
-              </button>
+            <div style={styles.providerGrid}>
+              {(
+                [
+                  TempMailProvider.MailTM,
+                  TempMailProvider.GuerrillaMail,
+                  TempMailProvider.TempMailLol,
+                  TempMailProvider.Maildrop,
+                ] as TempMailProvider[]
+              ).map((provider) => {
+                const isSelected = selectedProvider === provider;
+                return (
+                  <button
+                    key={provider}
+                    type="button"
+                    style={{
+                      ...styles.providerButton,
+                      ...(isSelected ? styles.providerButtonSelected : {}),
+                    }}
+                    onClick={() => selectProvider(provider)}
+                  >
+                    <span
+                      style={{
+                        ...styles.providerButtonText,
+                        ...(isSelected ? styles.providerButtonTextSelected : {}),
+                      }}
+                    >
+                      {PROVIDER_LABELS[provider]}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Existing Accounts Section */}
-          {((selectedProvider === TempMailProvider.MailGW && existingMailGw) ||
-            (selectedProvider === TempMailProvider.GuerrillaMail && existingGuerrilla)) && (
+          {activeExistingEmail && (
             <div style={styles.existingContainer}>
               <div style={styles.sectionTitle}>
-                Existing {selectedProvider === TempMailProvider.MailGW ? 'Mail.GW' : 'GuerrillaMail'}{' '}
-                Account
+                Existing {activeProviderLabel} Account
               </div>
               <div style={styles.existingEmailCard}>
                 <div style={styles.existingEmailContent}>
                   <span style={styles.existingEmailAddress}>
-                    {selectedProvider === TempMailProvider.MailGW
-                      ? existingMailGw
-                      : existingGuerrilla}
+                    {activeExistingEmail}
                   </span>
                 </div>
                 <div style={styles.existingEmailActions}>
                   <button
                     type="button"
                     style={styles.iconButton}
-                    onClick={() =>
-                      copyToClipboard(
-                        selectedProvider === TempMailProvider.MailGW
-                          ? existingMailGw!
-                          : existingGuerrilla!
-                      )
-                    }
+                    onClick={() => copyToClipboard(activeExistingEmail)}
                     aria-label="Copy Email Address"
                   >
                     <MdContentCopy size={24} color="#78F0BC" />
@@ -453,8 +545,7 @@ export default function TempMail() {
           {/* Create New Email Section */}
           <div style={styles.createContainer}>
             <div style={styles.sectionTitle}>
-              Create New{' '}
-              {selectedProvider === TempMailProvider.MailGW ? 'Mail.GW' : 'GuerrillaMail'} Email
+              Create New {activeProviderLabel} Email
             </div>
 
             <div style={styles.inputContainer}>
@@ -464,7 +555,11 @@ export default function TempMail() {
                   style={styles.usernameInput}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Username"
+                  placeholder={
+                    selectedProvider === TempMailProvider.TempMailLol
+                      ? 'Optional prefix (or leave random)'
+                      : 'Username'
+                  }
                   autoCapitalize="none"
                   autoCorrect="off"
                 />
@@ -478,7 +573,7 @@ export default function TempMail() {
                 </button>
               </div>
 
-              {selectedProvider === TempMailProvider.MailGW ? (
+              {selectedProvider === TempMailProvider.MailTM && (
                 <div style={styles.domainSelectorContainer}>
                   <div style={styles.domainSelectorLabel}>Select Domain:</div>
                   <button
@@ -502,7 +597,9 @@ export default function TempMail() {
                     onClose={() => setDomainDropdownVisible(false)}
                   />
                 </div>
-              ) : (
+              )}
+
+              {selectedProvider === TempMailProvider.GuerrillaMail && (
                 <div style={styles.domainSelectorContainer}>
                   <div style={styles.domainSelectorLabel}>Select Domain:</div>
                   <button
@@ -530,12 +627,19 @@ export default function TempMail() {
                 </div>
               )}
 
+              {selectedProvider === TempMailProvider.Maildrop && (
+                <div style={styles.domainSelectorContainer}>
+                  <div style={styles.domainSelectorLabel}>Domain:</div>
+                  <div style={styles.domainDropdownButton}>
+                    <span style={styles.domainDropdownButtonText}>@maildrop.cc</span>
+                  </div>
+                </div>
+              )}
+
               {/* Preview of the full email */}
               <div style={styles.emailPreview}>
                 <div style={styles.emailPreviewLabel}>Your email will be:</div>
-                <div style={styles.emailPreviewText}>
-                  {username}@{activeDomain}
-                </div>
+                <div style={styles.emailPreviewText}>{getPreviewEmail()}</div>
               </div>
             </div>
 
@@ -565,7 +669,7 @@ export default function TempMail() {
               address.
             </p>
             <p style={{ ...styles.helpText, whiteSpace: 'pre-line', marginBottom: 0 }}>
-              {'• Mail.GW emails typically last 10 days\n• GuerrillaMail emails typically last a few hours\n• All emails are automatically deleted after expiration'}
+              {'• Mail.TM: Full Hydra inbox with attachment support\n• GuerrillaMail: Multi-domain disposable sessions\n• TempMail.lol: Instant token-based inbox cached locally\n• Maildrop.cc: Instant passwordless GraphQL inbox'}
             </p>
           </div>
         </div>
@@ -621,21 +725,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 'bold',
     marginBottom: 16,
   },
-  providerButtons: {
-    display: 'flex',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  providerGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 8,
   },
   providerButton: {
-    flex: 1,
     padding: 12,
     borderRadius: 8,
     border: '1px solid #78F0BC',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
-    marginRight: 4,
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   providerButtonSelected: {

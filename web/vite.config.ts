@@ -10,6 +10,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/guerrilla/, ''),
       },
+      '/api/maildrop': {
+        target: 'https://api.maildrop.cc/graphql',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/maildrop/, ''),
+      },
     },
   },
 });

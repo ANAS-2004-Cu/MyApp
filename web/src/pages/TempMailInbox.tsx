@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { IoArrowBack, IoRefresh, IoMail } from 'react-icons/io5';
 import { MdDeleteOutline } from 'react-icons/md';
 import { FaInbox } from 'react-icons/fa';
@@ -8,13 +8,24 @@ import {
   getMessages,
   Email,
   deleteMessage,
-  hydrateMailGwToken,
+  hydrateMailTmToken,
   setAuthToken,
+  TempMailProvider,
+  getTempMailLolStoredData,
+  fetchTempMailLolMessages,
+  deleteTempMailLolMessage,
+  getMaildropStoredData,
+  fetchMaildropMessages,
+  deleteMaildropMessage,
 } from '../utils/tempMailService';
 import { useAlert } from '../context/AlertContext';
 
 export default function TempMailInbox() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const rawProvider = searchParams.get('provider') || TempMailProvider.MailTM;
+  const activeProvider =
+    rawProvider === 'mailgw' ? TempMailProvider.MailTM : rawProvider;
   const { showAlert } = useAlert();
 
   const [loading, setLoading] = useState(true);
@@ -22,33 +33,81 @@ export default function TempMailInbox() {
   const [emails, setEmails] = useState<Email[]>([]);
   const [email, setEmail] = useState<string | null>(null);
 
+  const getHeaderTitle = () => {
+    switch (activeProvider) {
+      case TempMailProvider.TempMailLol:
+        return 'TempMail.lol Inbox';
+      case TempMailProvider.Maildrop:
+        return 'Maildrop.cc Inbox';
+      default:
+        return 'Mail.TM Inbox';
+    }
+  };
+
   const fetchEmails = useCallback(async () => {
     try {
       setLoading(true);
-      hydrateMailGwToken();
-      const messages = await getMessages();
-      setEmails(messages || []);
+      if (activeProvider === TempMailProvider.TempMailLol) {
+        const messages = await fetchTempMailLolMessages();
+        setEmails(messages || []);
+      } else if (activeProvider === TempMailProvider.Maildrop) {
+        const messages = await fetchMaildropMessages();
+        setEmails(messages || []);
+      } else {
+        hydrateMailTmToken();
+        const messages = await getMessages();
+        setEmails(messages || []);
+      }
     } catch {
       showAlert('Error', 'Failed to load emails. Please try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [showAlert]);
+  }, [activeProvider, showAlert]);
 
   useEffect(() => {
     const init = async () => {
       try {
-        const storedMailGw = await SecureStore.getItemAsync('mailgw_data');
-        if (storedMailGw) {
-          const data = JSON.parse(storedMailGw);
+        if (activeProvider === TempMailProvider.TempMailLol) {
+          const stored = getTempMailLolStoredData();
+          if (stored?.address) {
+            setEmail(stored.address);
+            if (Array.isArray(stored.emails) && stored.emails.length > 0) {
+              setEmails(stored.emails);
+            }
+            await fetchEmails();
+          } else {
+            showAlert('Error', 'No active TempMail.lol email found. Please create one first.');
+            navigate('/TempMail', { replace: true });
+          }
+          return;
+        }
+
+        if (activeProvider === TempMailProvider.Maildrop) {
+          const stored = getMaildropStoredData();
+          if (stored?.email) {
+            setEmail(stored.email);
+            await fetchEmails();
+          } else {
+            showAlert('Error', 'No active Maildrop.cc email found. Please create one first.');
+            navigate('/TempMail', { replace: true });
+          }
+          return;
+        }
+
+        const storedMailTm =
+          (await SecureStore.getItemAsync('mailtm_data')) ||
+          (await SecureStore.getItemAsync('mailgw_data'));
+        if (storedMailTm) {
+          const data = JSON.parse(storedMailTm);
           setEmail(data.email);
           if (data.token) {
             setAuthToken(data.token);
           }
           await fetchEmails();
         } else {
-          showAlert('Error', 'No active Mail.GW email found. Please create one first.');
+          showAlert('Error', 'No active Mail.TM email found. Please create one first.');
           navigate('/TempMail', { replace: true });
         }
       } catch {
@@ -58,7 +117,7 @@ export default function TempMailInbox() {
     };
 
     init();
-  }, [fetchEmails, navigate, showAlert]);
+  }, [activeProvider, fetchEmails, navigate, showAlert]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -74,8 +133,16 @@ export default function TempMailInbox() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await deleteMessage(id);
-            setEmails((prev) => prev.filter((item) => item.id !== id));
+            if (activeProvider === TempMailProvider.TempMailLol) {
+              const remaining = deleteTempMailLolMessage(id);
+              setEmails(remaining);
+            } else if (activeProvider === TempMailProvider.Maildrop) {
+              await deleteMaildropMessage(id);
+              setEmails((prev) => prev.filter((item) => item.id !== id));
+            } else {
+              await deleteMessage(id);
+              setEmails((prev) => prev.filter((item) => item.id !== id));
+            }
           } catch {
             showAlert('Error', 'Failed to delete email. Please try again.');
           }
@@ -85,7 +152,9 @@ export default function TempMailInbox() {
   };
 
   const viewEmailDetails = (emailId: string) => {
-    navigate(`/EmailDetail?id=${encodeURIComponent(emailId)}&provider=mailgw`);
+    navigate(
+      `/EmailDetail?id=${encodeURIComponent(emailId)}&provider=${encodeURIComponent(activeProvider)}`
+    );
   };
 
   const formatDate = (dateString: string) => {
@@ -110,7 +179,7 @@ export default function TempMailInbox() {
           >
             <IoArrowBack size={24} color="#78F0BC" />
           </button>
-          <div style={styles.headerTitle}>Mail.GW Inbox</div>
+          <div style={styles.headerTitle}>{getHeaderTitle()}</div>
           <button
             type="button"
             style={styles.refreshButton}
@@ -146,7 +215,7 @@ export default function TempMailInbox() {
             <FaInbox size={60} color="#78F0BC" style={styles.emptyIcon} />
             <div style={styles.emptyText}>No emails yet</div>
             <div style={styles.emptySubText}>
-              New emails will appear here. Pull down to refresh.
+              New emails will appear here. Tap the refresh icon to check for new messages.
             </div>
           </div>
         ) : (

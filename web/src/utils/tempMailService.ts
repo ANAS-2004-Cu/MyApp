@@ -4,8 +4,10 @@ import { useEffect, useRef } from 'react';
 let sessionToken: string | null = null;
 
 export enum TempMailProvider {
-    MailGW = 'mail.gw',
+    MailTM = 'mail.tm',
     GuerrillaMail = 'guerrillamail',
+    TempMailLol = 'tempmail.lol',
+    Maildrop = 'maildrop.cc',
 }
 
 export interface GuerrillaEmailResponse {
@@ -67,7 +69,20 @@ export interface AuthResponse {
     id: string;
 }
 
-// Route GuerrillaMail requests through our Vercel / Vite CORS proxy
+export interface TempMailLolData {
+    address: string;
+    token: string;
+    emails: Email[];
+}
+
+export interface MaildropData {
+    email: string;
+    mailbox: string;
+}
+
+// ============================================================================
+// 1. GuerrillaMail API (via Vercel / Vite CORS proxy)
+// ============================================================================
 export const GUERRILLA_BASE_URL = '/api/guerrilla';
 
 export const testGuerrillaDomains = async (
@@ -137,24 +152,29 @@ export const generateRandomString = (length: number = 8): string => {
     return result;
 };
 
-export const MAILGW_API_URL = 'https://api.mail.gw';
+// ============================================================================
+// 2. Mail.tm API (https://api.mail.tm - replaces Mail.GW)
+// ============================================================================
+export const MAILTM_API_URL = 'https://api.mail.tm';
 
-export const mailGwApi = axios.create({
-    baseURL: MAILGW_API_URL,
+export const mailTmApi = axios.create({
+    baseURL: MAILTM_API_URL,
 });
 
 export const setAuthToken = (token: string | null) => {
     if (token) {
-        mailGwApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        mailTmApi.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } else {
-        delete mailGwApi.defaults.headers.common['Authorization'];
+        delete mailTmApi.defaults.headers.common['Authorization'];
     }
 };
 
-// Fix Audit Issue #1: Automatically restore Mail.GW Bearer token from localStorage on app load
-export const hydrateMailGwToken = (): string | null => {
+// Automatically restore Mail.tm Bearer token from localStorage (with legacy mailgw_data fallback)
+export const hydrateMailTmToken = (): string | null => {
     try {
-        const raw = window.localStorage.getItem('mailgw_data');
+        const raw =
+            window.localStorage.getItem('mailtm_data') ||
+            window.localStorage.getItem('mailgw_data');
         if (raw) {
             const parsed = JSON.parse(raw);
             if (parsed?.token) {
@@ -168,11 +188,14 @@ export const hydrateMailGwToken = (): string | null => {
     return null;
 };
 
-hydrateMailGwToken();
+// Keep alias for backward compatibility
+export const hydrateMailGwToken = hydrateMailTmToken;
+
+hydrateMailTmToken();
 
 export const getDomains = async () => {
     try {
-        const response = await mailGwApi.get('/domains');
+        const response = await mailTmApi.get('/domains');
         return response.data;
     } catch {
         throw new Error('Error fetching domains');
@@ -181,7 +204,7 @@ export const getDomains = async () => {
 
 export const createAccount = async (address: string, password: string) => {
     try {
-        const response = await mailGwApi.post('/accounts', {
+        const response = await mailTmApi.post('/accounts', {
             address,
             password,
         });
@@ -193,7 +216,7 @@ export const createAccount = async (address: string, password: string) => {
 
 export const login = async (address: string, password: string): Promise<AuthResponse> => {
     try {
-        const response = await mailGwApi.post('/token', {
+        const response = await mailTmApi.post('/token', {
             address,
             password,
         });
@@ -208,8 +231,8 @@ export const login = async (address: string, password: string): Promise<AuthResp
 
 export const getAccountDetails = async (id: string): Promise<Account> => {
     try {
-        hydrateMailGwToken();
-        const response = await mailGwApi.get(`/accounts/${id}`);
+        hydrateMailTmToken();
+        const response = await mailTmApi.get(`/accounts/${id}`);
         return response.data;
     } catch {
         throw new Error('Error getting account details');
@@ -218,11 +241,14 @@ export const getAccountDetails = async (id: string): Promise<Account> => {
 
 export const getMessages = async (page = 1): Promise<Email[]> => {
     try {
-        hydrateMailGwToken();
-        const response = await mailGwApi.get('/messages', {
+        hydrateMailTmToken();
+        const response = await mailTmApi.get('/messages', {
             params: { page },
         });
-        return response.data['hydra:member'];
+        if (Array.isArray(response.data)) {
+            return response.data;
+        }
+        return response.data['hydra:member'] || [];
     } catch {
         throw new Error('Error fetching messages');
     }
@@ -230,8 +256,8 @@ export const getMessages = async (page = 1): Promise<Email[]> => {
 
 export const getMessage = async (id: string): Promise<Email> => {
     try {
-        hydrateMailGwToken();
-        const response = await mailGwApi.get(`/messages/${id}`);
+        hydrateMailTmToken();
+        const response = await mailTmApi.get(`/messages/${id}`);
         return response.data;
     } catch {
         throw new Error('Error fetching message details');
@@ -240,19 +266,19 @@ export const getMessage = async (id: string): Promise<Email> => {
 
 export const deleteMessage = async (id: string): Promise<void> => {
     try {
-        hydrateMailGwToken();
-        await mailGwApi.delete(`/messages/${id}`);
+        hydrateMailTmToken();
+        await mailTmApi.delete(`/messages/${id}`);
     } catch {
         throw new Error('Error deleting message');
     }
 };
 
-export const downloadMailGwAttachment = async (downloadUrl: string, filename: string): Promise<void> => {
-    hydrateMailGwToken();
+export const downloadMailTmAttachment = async (downloadUrl: string, filename: string): Promise<void> => {
+    hydrateMailTmToken();
     const fullUrl = downloadUrl.startsWith('http')
         ? downloadUrl
-        : `${MAILGW_API_URL}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
-    const response = await mailGwApi.get(fullUrl, { responseType: 'blob' });
+        : `${MAILTM_API_URL}${downloadUrl.startsWith('/') ? '' : '/'}${downloadUrl}`;
+    const response = await mailTmApi.get(fullUrl, { responseType: 'blob' });
     const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
     const link = document.createElement('a');
     link.href = blobUrl;
@@ -263,16 +289,279 @@ export const downloadMailGwAttachment = async (downloadUrl: string, filename: st
     window.URL.revokeObjectURL(blobUrl);
 };
 
+export const downloadMailGwAttachment = downloadMailTmAttachment;
+
 export const verifyToken = async (): Promise<boolean> => {
     try {
-        hydrateMailGwToken();
-        await mailGwApi.get('/me');
+        hydrateMailTmToken();
+        await mailTmApi.get('/me');
         return true;
     } catch {
         return false;
     }
 };
 
+// ============================================================================
+// 3. TempMail.lol API (https://api.tempmail.lol)
+// ============================================================================
+const TEMPMAIL_LOL_DIRECT = 'https://api.tempmail.lol';
+const TEMPMAIL_LOL_STORAGE_KEY = 'tempmail_lol_data';
+
+export const createTempMailLolInbox = async (prefix?: string): Promise<TempMailLolData> => {
+    const payload = prefix && prefix.trim().length > 0 ? { prefix: prefix.trim() } : {};
+    let data: { address: string; token: string } | null = null;
+
+    try {
+        const res = await axios.post(`${TEMPMAIL_LOL_DIRECT}/v2/inbox/create`, payload);
+        data = res.data;
+    } catch {
+        const proxyRes = await axios.post(`/api/tempmail-lol?endpoint=/v2/inbox/create`, payload);
+        data = proxyRes.data;
+    }
+
+    if (!data || !data.address || !data.token) {
+        throw new Error('Failed to create TempMail.lol address');
+    }
+
+    const stored: TempMailLolData = {
+        address: data.address,
+        token: data.token,
+        emails: [],
+    };
+    window.localStorage.setItem(TEMPMAIL_LOL_STORAGE_KEY, JSON.stringify(stored));
+    return stored;
+};
+
+export const getTempMailLolStoredData = (): TempMailLolData | null => {
+    try {
+        const raw = window.localStorage.getItem(TEMPMAIL_LOL_STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw) as TempMailLolData;
+    } catch {
+        return null;
+    }
+};
+
+export const fetchTempMailLolMessages = async (): Promise<Email[]> => {
+    const stored = getTempMailLolStoredData();
+    if (!stored || !stored.token) {
+        throw new Error('No active TempMail.lol session');
+    }
+
+    let rawData: any = null;
+    try {
+        const res = await axios.get(`${TEMPMAIL_LOL_DIRECT}/v2/inbox`, {
+            params: { token: stored.token },
+        });
+        rawData = res.data;
+    } catch {
+        const proxyRes = await axios.get(`/api/tempmail-lol`, {
+            params: { endpoint: '/v2/inbox', token: stored.token },
+        });
+        rawData = proxyRes.data;
+    }
+
+    const incomingList: any[] = Array.isArray(rawData?.emails) ? rawData.emails : [];
+    const normalizedIncoming: Email[] = incomingList.map((item: any, idx: number) => {
+        const timestampMs = item.date
+            ? item.date > 1e12
+                ? item.date
+                : item.date * 1000
+            : Date.now();
+        const createdAt = new Date(timestampMs).toISOString();
+        const fromStr = String(item.from || 'Unknown');
+        const matches = fromStr.match(/(.*)\s<(.*)>/);
+        const fromName = matches ? matches[1].trim() : fromStr;
+        const fromAddress = matches ? matches[2].trim() : fromStr;
+        const bodyText = item.body || '';
+        const bodyHtml = item.html || `<pre style="white-space:pre-wrap;color:#fff">${bodyText}</pre>`;
+        const id =
+            item.id ||
+            `tmlol-${timestampMs}-${idx}-${fromAddress.replace(/[^a-zA-Z0-9]/g, '')}`;
+
+        return {
+            id,
+            from: { name: fromName, address: fromAddress },
+            to: [{ name: '', address: item.to || stored.address }],
+            subject: item.subject || '(No subject)',
+            intro: bodyText.slice(0, 120) || '(No content)',
+            text: bodyText,
+            html: bodyHtml,
+            createdAt,
+            hasAttachments: false,
+        };
+    });
+
+    // Merge newly received messages with locally cached messages (TempMail.lol clears server inbox on read)
+    const existing = Array.isArray(stored.emails) ? stored.emails : [];
+    const existingIds = new Set(existing.map((e) => e.id));
+    const newUnique = normalizedIncoming.filter((e) => !existingIds.has(e.id));
+    const merged = [...newUnique, ...existing];
+
+    const updated: TempMailLolData = {
+        ...stored,
+        emails: merged,
+    };
+    window.localStorage.setItem(TEMPMAIL_LOL_STORAGE_KEY, JSON.stringify(updated));
+    return merged;
+};
+
+export const getTempMailLolMessage = (id: string): Email | null => {
+    const stored = getTempMailLolStoredData();
+    if (!stored || !Array.isArray(stored.emails)) return null;
+    return stored.emails.find((e) => e.id === id) || null;
+};
+
+export const deleteTempMailLolMessage = (id: string): Email[] => {
+    const stored = getTempMailLolStoredData();
+    if (!stored) return [];
+    const nextEmails = (stored.emails || []).filter((e) => e.id !== id);
+    const updated: TempMailLolData = {
+        ...stored,
+        emails: nextEmails,
+    };
+    window.localStorage.setItem(TEMPMAIL_LOL_STORAGE_KEY, JSON.stringify(updated));
+    return nextEmails;
+};
+
+// ============================================================================
+// 4. Maildrop.cc GraphQL API (https://api.maildrop.cc/graphql)
+// ============================================================================
+const MAILDROP_STORAGE_KEY = 'maildrop_data';
+
+const executeMaildropGraphQL = async (query: string, variables: Record<string, any>) => {
+    try {
+        const res = await axios.post('/api/maildrop', { query, variables });
+        if (res.data?.data) return res.data.data;
+    } catch {
+        // Fallback to direct endpoint
+    }
+    const directRes = await axios.post('https://api.maildrop.cc/graphql', {
+        query,
+        variables,
+    });
+    return directRes.data?.data;
+};
+
+export const createMaildropAccount = (username: string): MaildropData => {
+    const cleanUser = username.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '') || generateRandomString(10);
+    const data: MaildropData = {
+        email: `${cleanUser}@maildrop.cc`,
+        mailbox: cleanUser,
+    };
+    window.localStorage.setItem(MAILDROP_STORAGE_KEY, JSON.stringify(data));
+    return data;
+};
+
+export const getMaildropStoredData = (): MaildropData | null => {
+    try {
+        const raw = window.localStorage.getItem(MAILDROP_STORAGE_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw) as MaildropData;
+    } catch {
+        return null;
+    }
+};
+
+export const fetchMaildropMessages = async (): Promise<Email[]> => {
+    const stored = getMaildropStoredData();
+    if (!stored || !stored.mailbox) {
+        throw new Error('No active Maildrop.cc mailbox');
+    }
+
+    const query = `
+      query GetInbox($mailbox: String!) {
+        inbox(mailbox: $mailbox) {
+          id
+          headerfrom
+          subject
+          date
+        }
+      }
+    `;
+    const data = await executeMaildropGraphQL(query, { mailbox: stored.mailbox });
+    const list: any[] = Array.isArray(data?.inbox) ? data.inbox : [];
+
+    return list.map((item: any) => {
+        const fromStr = String(item.headerfrom || 'Unknown');
+        const matches = fromStr.match(/(.*)\s<(.*)>/);
+        const fromName = matches ? matches[1].replace(/^"|"$/g, '').trim() : fromStr;
+        const fromAddress = matches ? matches[2].trim() : fromStr;
+
+        return {
+            id: item.id,
+            from: { name: fromName, address: fromAddress },
+            to: [{ name: stored.mailbox, address: stored.email }],
+            subject: item.subject || '(No subject)',
+            intro: `Received via Maildrop.cc (${fromName})`,
+            text: '',
+            html: '',
+            createdAt: item.date || new Date().toISOString(),
+            hasAttachments: false,
+        };
+    });
+};
+
+export const fetchMaildropMessageDetail = async (id: string): Promise<Email> => {
+    const stored = getMaildropStoredData();
+    if (!stored || !stored.mailbox) {
+        throw new Error('No active Maildrop.cc mailbox');
+    }
+
+    const query = `
+      query GetMessage($mailbox: String!, $id: String!) {
+        message(mailbox: $mailbox, id: $id) {
+          id
+          headerfrom
+          subject
+          date
+          data
+          html
+        }
+      }
+    `;
+    const data = await executeMaildropGraphQL(query, { mailbox: stored.mailbox, id });
+    const msg = data?.message;
+    if (!msg) {
+        throw new Error('Maildrop message not found');
+    }
+
+    const fromStr = String(msg.headerfrom || 'Unknown');
+    const matches = fromStr.match(/(.*)\s<(.*)>/);
+    const fromName = matches ? matches[1].replace(/^"|"$/g, '').trim() : fromStr;
+    const fromAddress = matches ? matches[2].trim() : fromStr;
+    const htmlBody = msg.html || `<pre style="white-space:pre-wrap;color:#fff">${msg.data || ''}</pre>`;
+    const plainBody = msg.data || (msg.html ? msg.html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '');
+
+    return {
+        id: msg.id,
+        from: { name: fromName, address: fromAddress },
+        to: [{ name: stored.mailbox, address: stored.email }],
+        subject: msg.subject || '(No subject)',
+        intro: plainBody.slice(0, 120),
+        text: plainBody || 'No content available',
+        html: htmlBody,
+        createdAt: msg.date || new Date().toISOString(),
+        hasAttachments: false,
+    };
+};
+
+export const deleteMaildropMessage = async (id: string): Promise<boolean> => {
+    const stored = getMaildropStoredData();
+    if (!stored || !stored.mailbox) return false;
+
+    const query = `
+      mutation DeleteMessage($mailbox: String!, $id: String!) {
+        delete(mailbox: $mailbox, id: $id)
+      }
+    `;
+    const data = await executeMaildropGraphQL(query, { mailbox: stored.mailbox, id });
+    return Boolean(data?.delete);
+};
+
+// ============================================================================
+// GuerrillaMail Session Helpers
+// ============================================================================
 export const GUERRILLA_DOMAINS = [
     'guerrillamail.com',
     'guerrillamail.net',

@@ -13,8 +13,13 @@ import * as SecureStore from '../utils/storage';
 import {
   getMessage,
   deleteMessage,
-  downloadMailGwAttachment,
-  hydrateMailGwToken,
+  downloadMailTmAttachment,
+  hydrateMailTmToken,
+  TempMailProvider,
+  getTempMailLolMessage,
+  deleteTempMailLolMessage,
+  fetchMaildropMessageDetail,
+  deleteMaildropMessage,
 } from '../utils/tempMailService';
 import * as GuerrillaAPI from '../utils/tempMailService';
 import { useAlert } from '../context/AlertContext';
@@ -23,7 +28,8 @@ export default function EmailDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const id = searchParams.get('id');
-  const provider = searchParams.get('provider');
+  const rawProvider = searchParams.get('provider') || TempMailProvider.MailTM;
+  const provider = rawProvider === 'mailgw' ? TempMailProvider.MailTM : rawProvider;
   const { showAlert } = useAlert();
 
   const [loading, setLoading] = useState(true);
@@ -32,7 +38,10 @@ export default function EmailDetail() {
   const [plainTextContent, setPlainTextContent] = useState('');
   const [showHtml, setShowHtml] = useState(true);
 
-  const isMailGw = provider === 'mailgw';
+  const isGuerrilla = provider === 'guerrilla' || provider === TempMailProvider.GuerrillaMail;
+  const isTempMailLol = provider === TempMailProvider.TempMailLol;
+  const isMaildrop = provider === TempMailProvider.Maildrop;
+  const isMailTm = !isGuerrilla && !isTempMailLol && !isMaildrop;
 
   const initializeGuerrillaAPI = async () => {
     try {
@@ -57,8 +66,25 @@ export default function EmailDetail() {
     try {
       setLoading(true);
 
-      if (isMailGw) {
-        hydrateMailGwToken();
+      if (isTempMailLol) {
+        const emailData = getTempMailLolMessage(id);
+        if (!emailData) {
+          throw new Error('TempMail.lol message not found');
+        }
+        setEmail(emailData);
+        setHtmlContent(
+          emailData.html || `<div>${emailData.text || 'No content available'}</div>`
+        );
+        setPlainTextContent(emailData.text || 'No content available');
+      } else if (isMaildrop) {
+        const emailData = await fetchMaildropMessageDetail(id);
+        setEmail(emailData);
+        setHtmlContent(
+          emailData.html || `<div>${emailData.text || 'No content available'}</div>`
+        );
+        setPlainTextContent(emailData.text || 'No content available');
+      } else if (isMailTm) {
+        hydrateMailTmToken();
         const emailData = await getMessage(id);
         setEmail(emailData);
 
@@ -95,7 +121,7 @@ export default function EmailDetail() {
     } finally {
       setLoading(false);
     }
-  }, [id, isMailGw, showAlert]);
+  }, [id, isMailTm, isTempMailLol, isMaildrop, showAlert]);
 
   useEffect(() => {
     if (!id || typeof id !== 'string') {
@@ -110,8 +136,10 @@ export default function EmailDetail() {
   const handleBack = () => {
     if (window.history.length > 1) {
       navigate(-1);
+    } else if (isGuerrilla) {
+      navigate('/GuerrillaMailInbox');
     } else {
-      navigate(isMailGw ? '/TempMailInbox' : '/GuerrillaMailInbox');
+      navigate(`/TempMailInbox?provider=${encodeURIComponent(provider)}`);
     }
   };
 
@@ -125,7 +153,13 @@ export default function EmailDetail() {
         style: 'destructive',
         onPress: async () => {
           try {
-            if (isMailGw) {
+            if (isTempMailLol) {
+              deleteTempMailLolMessage(email.id);
+              showAlert('Success', 'Email deleted successfully');
+            } else if (isMaildrop) {
+              await deleteMaildropMessage(email.id);
+              showAlert('Success', 'Email deleted successfully');
+            } else if (isMailTm) {
               await deleteMessage(email.id);
               showAlert('Success', 'Email deleted successfully');
             } else {
@@ -228,18 +262,21 @@ export default function EmailDetail() {
     );
   }
 
-  const emailSubject = isMailGw ? email.subject : email.mail_subject;
-  const fromName = isMailGw
+  const isStandardEmailModel = !isGuerrilla;
+  const emailSubject = isStandardEmailModel ? email.subject : email.mail_subject;
+  const fromName = isStandardEmailModel
     ? email.from?.name || 'Unknown'
     : email.mail_from?.match(/(.*)\s<(.*)>/)
     ? email.mail_from.match(/(.*)\s<(.*)>/)[1]
     : email.mail_from;
-  const fromEmail = isMailGw
+  const fromEmail = isStandardEmailModel
     ? email.from?.address
     : email.mail_from?.match(/(.*)\s<(.*)>/)
     ? email.mail_from.match(/(.*)\s<(.*)>/)[2]
     : email.mail_from;
-  const dateDisplay = formatDate(isMailGw ? email.createdAt : email.mail_timestamp);
+  const dateDisplay = formatDate(
+    isStandardEmailModel ? email.createdAt : email.mail_timestamp
+  );
 
   const htmlWrapper = `<!doctype html>
 <html>
@@ -308,7 +345,7 @@ export default function EmailDetail() {
               </div>
             </div>
 
-            {isMailGw && email.to && (
+            {isStandardEmailModel && email.to && (
               <div style={styles.recipientContainer}>
                 <span style={styles.recipientLabel}>To: </span>
                 <span style={styles.recipientAddress}>
@@ -364,7 +401,7 @@ export default function EmailDetail() {
             <span style={styles.copyButtonText}>Copy Content</span>
           </button>
 
-          {isMailGw &&
+          {isMailTm &&
             email.hasAttachments &&
             Array.isArray(email.attachments) &&
             email.attachments.length > 0 && (
@@ -379,7 +416,7 @@ export default function EmailDetail() {
                     style={styles.attachmentItem}
                     onClick={async () => {
                       try {
-                        await downloadMailGwAttachment(
+                        await downloadMailTmAttachment(
                           attachment.downloadUrl,
                           attachment.filename || 'attachment'
                         );
