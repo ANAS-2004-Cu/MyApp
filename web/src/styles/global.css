@@ -1,0 +1,111 @@
+:root {
+  --mint: #78F0BC;
+  --mint-10: rgba(120, 240, 188, 0.1);
+  --mint-20: rgba(120, 240, 188, 0.2);
+  --mint-30: rgba(120, 240, 188, 0.3);
+  --salmon: #FF9AA2;
+  --coral: #FF6B6B;
+  --purple: #5D3FD3;
+  --gold: #FFD700;
+  --cyan: #00E0FF;
+  --dark-bg: #121212;
+  --modal-bg: #1A1A1A;
+  --text-white: #FFFFFF;
+  --text-muted: #CCCCCC;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--dark-bg);
+  color: var(--text-white);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: opacity 0.15s ease, transform 0.12s ease;
+}
+
+button:active:not(:disabled) {
+  opacity: 0.8;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input {
+  font-family: inherit;
+  outline: none;
+}
+
+.app-background {
+  width: 100%;
+  min-height: 100vh;
+  background-image: url('/background.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.app-viewport {
+  width: 100%;
+  max-width: 520px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--mint);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner-large {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+}
+
+/* Hide horizontal scrollbar in GuessHistory while keeping scrollability */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
